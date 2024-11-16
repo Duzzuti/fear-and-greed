@@ -53,7 +53,7 @@ jobs:
         id: check_pr
         run: |
           gh pr list --head update-margin-data --base main --state open --json number -q '.[0].number' > pr_number.txt
-          if [ -s pr_number.txt ]; then
+          if grep -q '[^[:space:]]' pr_number.txt; then
             echo "pr_exists=true" >> $GITHUB_ENV
           else
             echo "pr_exists=false" >> $GITHUB_ENV

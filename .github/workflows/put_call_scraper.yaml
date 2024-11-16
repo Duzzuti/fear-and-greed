@@ -57,12 +57,6 @@ jobs:
           else
             echo "pr_exists=false" >> $GITHUB_ENV
           fi
-
-      - name: Debug
-        run: |
-          cat pr_number.txt
-          cat $GITHUB_ENV
-
       
       # Step 7: Push changes
       - name: Push changes
