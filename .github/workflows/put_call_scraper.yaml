@@ -52,12 +52,18 @@ jobs:
         id: check_pr
         run: |
           gh pr list --head update-put-call --base main --state open --json number -q '.[0].number' > pr_number.txt
-          cat pr_number.txt
           if [ -s pr_number.txt ]; then
             echo "pr_exists=true" >> $GITHUB_ENV
           else
             echo "pr_exists=false" >> $GITHUB_ENV
           fi
+
+      - name: Debug
+        run: |
+          echo "pr_exists: ${{ env.pr_exists }}"
+          cat pr_number.txt
+          cat $GITHUB_ENV
+
       
       # Step 7: Push changes
       - name: Push changes
