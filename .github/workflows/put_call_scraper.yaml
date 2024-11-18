@@ -60,7 +60,6 @@ jobs:
 
       - name: Debug
         run: |
-          echo "pr_exists: ${{ env.pr_exists }}"
           cat pr_number.txt
           cat $GITHUB_ENV
 
