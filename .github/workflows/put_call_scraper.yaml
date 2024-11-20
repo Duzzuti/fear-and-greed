@@ -47,6 +47,8 @@ jobs:
       
       # Step 6: Check for existing PR
       - name: Check for existing PR
+        env:
+          GH_TOKEN: ${{ github.token }}
         id: check_pr
         run: |
           gh pr list --head update-put-call --base main --state open --json number -q '.[0].number' > pr_number.txt
