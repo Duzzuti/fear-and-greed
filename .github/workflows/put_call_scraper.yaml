@@ -39,12 +39,17 @@ jobs:
           git fetch
           git checkout update-put-call || git checkout -b update-put-call
           git pull || exit 1
-          
+
       # Step 5: Run the scraper
       - name: Run put call ratio scraper
         run: python scraper/put_call_scraper.py
+      
+      # Step 6: Push changes
+      - name: Push changes
+        run: |
+          git push origin update-put-call || git push origin update-put-call --set-upstream
           
-      # Step 6: Create a pull request
+      # Step 7: Create a pull request
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:

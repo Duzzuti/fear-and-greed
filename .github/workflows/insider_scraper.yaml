@@ -44,8 +44,13 @@ jobs:
       # Step 5: Run the scraper
       - name: Run insider trading data scraper
         run: python scraper/insider_scraper.py
+      
+      # Step 6: Push changes
+      - name: Push changes
+        run: |
+          git push origin update-insider-transaction || git push origin update-insider-transaction --set-upstream
           
-      # Step 6: Create a pull request
+      # Step 7: Create a pull request
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:

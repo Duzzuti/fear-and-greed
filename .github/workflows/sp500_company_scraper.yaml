@@ -44,8 +44,13 @@ jobs:
       # Step 5: Run the scraper
       - name: Run sp500 scraper
         run: python scraper/sp500_company_scraper.py
+
+      # Step 6: Push changes
+      - name: Push changes
+        run: |
+          git push origin update-sp500-tickers || git push origin update-sp500-tickers --set-upstream
           
-      # Step 6: Create a pull request
+      # Step 7: Create a pull request
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:
