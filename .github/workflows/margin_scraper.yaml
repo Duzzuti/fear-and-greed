@@ -32,11 +32,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pandas beautifulsoup4 requests numpy
 
-      # Step 4: Run the scraper
-      - name: Run insider trading data scraper
-        run: python scraper/margin_scraper.py
-
-      # Step 5: Set up the git configuration and create a new branch
+      # Step 4: Set up the git configuration and create a new branch
       - name: Create or update branch
         run: |
           git config --global user.name "github-actions[bot]"
@@ -44,6 +40,10 @@ jobs:
           git fetch
           git checkout update-margin-data || git checkout -b update-margin-data
           git pull || exit 1
+      
+      # Step 5: Run the scraper
+      - name: Run insider trading data scraper
+        run: python scraper/margin_scraper.py
 
       # Step 6: Create a pull request
       - name: Create Pull Request
