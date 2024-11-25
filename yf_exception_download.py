@@ -1,3 +1,4 @@
+from sys import exit
 import yfinance as yf
 import yfinance.exceptions as yf_exc
 import yfinance.shared as yf_shared
@@ -22,7 +23,16 @@ def downloadWithExceptions(ticker : str, start=None, end=None):
             print("Could not parse error message: " + error)
             exit()
         try:
-            full_err = getattr(yf_exc, error_type)(error_msg)
+            if error_type in (yf_exc.YFDataException.__name__, yf_exc.YFException.__name__, yf_exc.YFNotImplementedError.__name__):
+                full_err = getattr(yf_exc, error_type)(error_msg)
+            elif error_type in (yf_exc.YFEarningsDateMissing.__name__, yf_exc.YFTzMissingError.__name__):
+                full_err = getattr(yf_exc, error_type)(ticker)
+            elif error_type in (yf_exc.YFPricesMissingError.__name__, yf_exc.YFTickerMissingError.__name__):
+                full_err = getattr(yf_exc, error_type)(ticker, error_msg)
+            elif error_type == yf_exc.YFInvalidPeriodError.__name__:
+                full_err = getattr(yf_exc, error_type)(ticker, "start=" + str(start) + ", end=" + str(end), error_msg)
+            else:
+                raise AttributeError("Unknown error type: " + error_type)
         except AttributeError as e:
             print("Unknown exception: " + error)
             exit()
