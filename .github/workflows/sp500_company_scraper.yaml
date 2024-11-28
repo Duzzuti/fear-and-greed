@@ -6,6 +6,10 @@ on:
     - cron: "0 12 * * *"
 
   workflow_dispatch: # Allows you to manually trigger the workflow
+  
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   scrape:
