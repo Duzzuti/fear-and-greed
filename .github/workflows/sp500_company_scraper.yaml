@@ -55,6 +55,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: update-sp500-tickers
+          base: main # Base branch for the pull request
           title: "Update S&P 500 Tickers"
           body: |
             This pull request updates the list of S&P 500 tickers scraped from Wikipedia.
