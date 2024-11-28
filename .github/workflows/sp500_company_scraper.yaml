@@ -36,20 +36,24 @@ jobs:
       - name: Run sp500 scraper
         run: python scraper/sp500_company_scraper.py
 
-      # Step 5: Commit changes to a new branch
-      - name: Create a new branch and commit changes
+      - name: Create or update branch
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b update-sp500-tickers
+          git fetch origin update-sp500-tickers || true
+          git checkout -B update-sp500-tickers origin/update-sp500-tickers || git checkout -b update-sp500-tickers
+
+      # Step 6: Commit changes
+      - name: Commit changes
+        run: |
           git add repoData/sp500_companies.csv
           git commit -m "Update S&P 500 tickers [ci skip]" || echo "No changes to commit"
 
-      # Step 6: Push changes to a new branch
+      # Step 7: Push changes to a new branch
       - name: Push changes to new branch
-        run: git push --set-upstream origin update-sp500-tickers
+        run: git push --set-upstream origin update-sp500-tickers --force-with-lease
 
-      # Step 7: Create a pull request
+      # Step 8: Create a pull request
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:
