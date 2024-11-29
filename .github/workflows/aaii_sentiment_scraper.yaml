@@ -1,0 +1,68 @@
+name: Scrape AAII Sentiment
+on:
+  schedule:
+    # Runs every day at 12:00 UTC
+    - cron: "0 12 * * *"
+
+  workflow_dispatch: # Allows you to manually trigger the workflow
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repo
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy beautifulsoup4 requests
+
+      # Step 4: Run the scraper
+      - name: Run AAII sentiment scraper
+        run: python scraper/aaii_scraper.py
+
+      # Step 5: Create or update branch
+      - name: Create or update branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin update-aaii-sentiment || true
+          git checkout -B update-aaii-sentiment origin/update-aaii-sentiment || git checkout -b update-aaii-sentiment
+
+      # Step 6: Commit changes
+      - name: Commit changes
+        run: |
+          git add repoData/aaii_sentiment.csv
+          git commit -m "Update AAII Sentiment data [ci skip]" || echo "No changes to commit"
+
+      # Step 7: Push changes to a new branch
+      - name: Push changes to new branch
+        run: git push --set-upstream origin update-aaii-sentiment --force-with-lease
+
+      # Step 8: Create a pull request
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: update-aaii-sentiment
+          base: main # Base branch for the pull request
+          title: "Update AAII Sentiment Data"
+          body: |
+            This pull request updates the AAII sentiment data scraped from AAII's website.
+          labels: "auto-generated,scraper"
+
+
