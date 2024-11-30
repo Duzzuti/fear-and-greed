@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import pandas_datareader.data as web
 import scipy.stats
 
-import sp500_scraper    # scrapes the S&P 500 companies from Wikipedia
 import put_call         # fetches the put/call ratios from alphalerts.com
 
 data_dir = "data/"
@@ -23,7 +22,6 @@ if not os.path.exists(downloads_dir):
     os.makedirs(downloads_dir)
 
 # Scrape S&P 500 companies
-sp500_scraper.scrape(data_dir)
 put_call_data = put_call.get_put_call_ratios(data_dir)
 
 
