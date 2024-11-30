@@ -1,0 +1,60 @@
+name: Scrape Put Call Ratios
+on:
+  schedule:
+    # Runs every day at 12:00 UTC
+    - cron: "0 12 * * *"
+
+  workflow_dispatch: # Allows you to manually trigger the workflow
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repo
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas beautifulsoup4 requests
+
+      # Step 4: Run the scraper
+      - name: Run put call ratio scraper
+        run: python scraper/put_call_scraper.py
+
+      # Step 5: Create or update branch
+      - name: Create or update branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin update-put-call || true
+          git checkout -B update-put-call origin/update-put-call || git checkout -b update-put-call
+          
+      # Step 6: Create a pull request
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          add-paths: "repoData/put_call_ratios.csv"
+          commit-message: "Update Put Call Ratios [ci skip]"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: update-put-call
+          base: main # Base branch for the pull request
+          title: "Update Put Call Ratios"
+          body: |
+            This pull request updates the list of put call ratios scraped from YCharts.
+          labels: "auto-generated,scraper"
+
+
