@@ -41,6 +41,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch
           git fetch origin update-insider-transactions || true
           git checkout -B update-insider-transaction origin/update-insider-transaction || git checkout -b update-insider-transaction
 
