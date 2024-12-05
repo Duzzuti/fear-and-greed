@@ -19,7 +19,7 @@ class Metric:
         cls.end_date = end_date
 
     def get(self):
-        if self.data_dir is None or self.start_date is None or self.end_date is None:
+        if self.data_dir is None or self.start_date is None:
             raise ValueError("Please set the preferences.")
         self.fetch()
         self.calculate()

@@ -14,7 +14,9 @@ import yfinance.exceptions as yf_exc
 # - note that the sp500 companies are not always the same and therefore our sp500 strength and breadth are wrong (cooked)
 
 # Fetch data from Yahoo Finance
-def fetch_yf_data(ticker, data_dir, start_date, end_date=dt.date.today()):
+def fetch_yf_data(ticker, data_dir, start_date, end_date=None):
+    if end_date == None:
+        end_date = dt.date.today()
     # convert start_date and end_date to datetime objects
     if isinstance(start_date, str):
         start_date = dt.datetime.strptime(start_date, "%Y-%m-%d").date()
