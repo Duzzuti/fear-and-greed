@@ -18,7 +18,7 @@ class SP500Momentum(Metric):
     
     def normalize(self):
         # Normalize the data
-        self.result = utils.linear_weighted_backoff(self.processed, 100, window=1000, min_backoff=0.8, max_backoff=0.85)
+        self.result = utils.difference_to_ema(self.processed, steepness=0.2)
 
 class VIX(Metric):
     def __init__(self):
@@ -34,4 +34,4 @@ class VIX(Metric):
     
     def normalize(self):
         # Normalize the data
-        self.result = utils.linear_weighted_backoff(self.processed, 0, window=1000, min_backoff=0.7, max_backoff=0.95, reverse_max=100)
+        self.result = utils.difference_to_ema(self.processed, reverse=True, steepness=0.2)

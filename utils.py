@@ -184,3 +184,21 @@ def linear_weighted_backoff(metric, add, window=1000, min_backoff=0.5, max_backo
     normalized = (metric_clipped - rolling_min) / (rolling_max - rolling_min) * 100
 
     return normalized
+
+
+def difference_to_ema(metric, window=125, steepness=1, reverse=False):
+    """
+    Calculate the difference between a metric and its Exponential Moving Average (EMA).
+
+    Parameters:
+    - metric: A pandas Series of the data to normalize.
+    - window: The lookback window size for the EMA.
+
+    Returns:
+    - A pandas Series with the difference between the metric and its EMA.
+    """
+    if reverse:
+        metric = -metric
+    ema = metric.ewm(span=window, adjust=False).mean()
+    return (np.tanh((metric - ema) * steepness) + 1) * 50
+
