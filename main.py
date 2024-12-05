@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import pandas_datareader.data as web
 import scipy.stats
 
-import sp500_scraper    # scrapes the S&P 500 companies from Wikipedia
 import put_call         # fetches the put/call ratios from alphalerts.com
 
 data_dir = "data/"
@@ -23,7 +22,6 @@ if not os.path.exists(downloads_dir):
     os.makedirs(downloads_dir)
 
 # Scrape S&P 500 companies
-sp500_scraper.scrape(data_dir)
 put_call_data = put_call.get_put_call_ratios(data_dir)
 
 
@@ -208,6 +206,19 @@ def calculate_junk_bond_spread(start_date, rand_format : pd.DataFrame):
     junk_bond_spread = rand_format[["BAMLH0A0HYM2"]]
     print(junk_bond_spread)
     return junk_bond_spread
+
+def calculate_yield_curve(start_date, rand_format : pd.DataFrame):
+    # Fetch data from FRED
+    yield_curve : pd.DataFrame = web.DataReader("T10Y2Y", "fred", start_date)  # yield curve
+    yield_curve.ffill(inplace=True)
+    # rename the index to "Date"
+    yield_curve.index.name = "Date"
+    rand_format = rand_format.copy()
+    rand_format["T10Y2Y"] = yield_curve
+    # remove the other columns
+    yield_curve = rand_format[["T10Y2Y"]]
+    print(yield_curve)
+    return yield_curve
 
 def normalize_metric(metric):
     return (metric - metric.min()) / (metric.max() - metric.min()) * 100

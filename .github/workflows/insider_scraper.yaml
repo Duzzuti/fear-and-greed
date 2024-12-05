@@ -1,0 +1,62 @@
+name: Scrape Insider Trading Data
+
+on:
+  schedule:
+    # Runs every day at 12:00 UTC
+    - cron: "0 12 * * *"
+
+  workflow_dispatch: # Allows you to manually trigger the workflow
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repo
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas beautifulsoup4 requests datetime
+
+      # Step 4: Run the scraper
+      - name: Run insider trading data scraper
+        run: python scraper/insider_scraper.py
+
+      # Step 5: Set up the git configuration and create a new branch
+      - name: Create or update branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch
+          git fetch origin update-insider-transactions || true
+          git checkout -B update-insider-transaction origin/update-insider-transaction || git checkout -b update-insider-transaction
+
+      # Step 6: Create a pull request
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          add-paths: "repoData/insider.csv"
+          commit-message: "Update insider trading data [ci skip]"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: update-insider-transaction
+          base: main # Base branch for the pull request
+          title: "Update Insider Trading Data"
+          body: |
+            This pull request updates the list of insider trading data scraped from Gurufocus.
+          labels: "auto-generated,scraper"
+
+
