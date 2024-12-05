@@ -9,6 +9,7 @@ class Metric:
         self.data = None
         self.processed = None
         self.result = None
+        self.test = None    # DEBUG
         self.name = self.__class__.__name__
     
     @classmethod
