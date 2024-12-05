@@ -143,6 +143,15 @@ def fetch_sp500companies_data(data_dir, sp500_dir, start_date, end_date=dt.date.
     data.to_csv(data_dir + f"{start_date}_{end_date}_sp500.csv")
     return data
 
+def get_repo_data(file_name, start_date=None, end_date=None, dir="repoData/"):
+    data = pd.read_csv(dir + file_name, index_col=0, parse_dates=True)
+    if start_date:
+        data = data[data.index >= start_date]
+    if end_date:
+        data = data[data.index <= end_date]
+    return data
+
+
 def linear_weighted_backoff(metric, add, window=1000, min_backoff=0.5, max_backoff=0.5, reverse_max=None):
     """
     Normalize data with a linear weighted back-off for the max value.
@@ -186,7 +195,6 @@ def linear_weighted_backoff(metric, add, window=1000, min_backoff=0.5, max_backo
     normalized = (metric_clipped - rolling_min) / (rolling_max - rolling_min) * 100
 
     return normalized
-
 
 def difference_to_ema(metric, window=125, steepness=1, reverse=False):
     """

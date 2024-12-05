@@ -35,3 +35,19 @@ class VIX(Metric):
     def normalize(self):
         # Normalize the data
         self.result = utils.difference_to_ema(self.processed, reverse=True, steepness=0.2)
+
+class MarginStats(Metric):
+    def __init__(self):
+        super().__init__()
+
+    def fetch(self):
+        # Load the margin stats data
+        self.data = utils.get_repo_data("margin_stats.csv", self.start_date, self.end_date)["Leverage Ratio"]
+
+    def calculate(self):
+        # no calculation needed
+        self.processed = self.data
+    
+    def normalize(self):
+        # no normalization needed
+        self.result = self.processed
