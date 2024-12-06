@@ -81,5 +81,6 @@ class InsiderTransactions(Metric):
         self.processed = self.data
     
     def normalize(self):
-        # TODO: Normalize the data (how does insider trading relate to market sentiment?)
-        self.result = self.processed
+        # Normalize the data
+        self.result = utils.difference_to_ema(self.processed, window=5, steepness=10)
+
