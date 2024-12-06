@@ -212,3 +212,18 @@ def difference_to_ema(metric, window=125, steepness=1, reverse=False):
     ema = metric.ewm(span=window, adjust=False).mean()
     return (np.tanh((metric - ema) * steepness) + 1) * 50
 
+def pct_difference_to_ema(metric, window=125, steepness=1, reverse=False):
+    """
+    Calculate the percentage difference between a metric and its Exponential Moving Average (EMA).
+
+    Parameters:
+    - metric: A pandas Series of the data to normalize.
+    - window: The lookback window size for the EMA.
+
+    Returns:
+    - A pandas Series with the percentage difference between the metric and its EMA.
+    """
+    if reverse:
+        metric = -metric
+    ema = metric.ewm(span=window, adjust=False).mean()
+    return (np.tanh(((metric - ema)/ ema)* steepness) + 1) * 50

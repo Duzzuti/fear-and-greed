@@ -13,13 +13,11 @@ class SP500Momentum(Metric):
 
     def calculate(self):
         # Calculate the momentum
-        moving_avg = self.data.rolling(window=self.moving_avg_window).mean()
-        momentum = (self.data - moving_avg) / moving_avg
-        self.processed = momentum * 100  # Convert to percentage
+        self.processed = utils.pct_difference_to_ema(self.data, steepness=15, window=self.moving_avg_window)
     
     def normalize(self):
-        # Normalize the data
-        self.result = utils.difference_to_ema(self.processed, steepness=0.2)
+        # no normalization needed
+        self.result = self.processed
 
 class VIX(Metric):
     def __init__(self):
