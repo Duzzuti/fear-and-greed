@@ -14,7 +14,9 @@ import yfinance.exceptions as yf_exc
 # - note that the sp500 companies are not always the same and therefore our sp500 strength and breadth are wrong (cooked)
 
 # Fetch data from Yahoo Finance
-def fetch_yf_data(ticker, data_dir, start_date, end_date=dt.date.today()):
+def fetch_yf_data(ticker, data_dir, start_date, end_date=None):
+    if end_date == None:
+        end_date = dt.date.today()
     # convert start_date and end_date to datetime objects
     if isinstance(start_date, str):
         start_date = dt.datetime.strptime(start_date, "%Y-%m-%d").date()
@@ -141,6 +143,15 @@ def fetch_sp500companies_data(data_dir, sp500_dir, start_date, end_date=dt.date.
     data.to_csv(data_dir + f"{start_date}_{end_date}_sp500.csv")
     return data
 
+def get_repo_data(file_name, start_date=None, end_date=None, dir="repoData/"):
+    data = pd.read_csv(dir + file_name, index_col=0, parse_dates=True)
+    if start_date:
+        data = data[data.index >= start_date]
+    if end_date:
+        data = data[data.index <= end_date]
+    return data
+
+
 def linear_weighted_backoff(metric, add, window=1000, min_backoff=0.5, max_backoff=0.5, reverse_max=None):
     """
     Normalize data with a linear weighted back-off for the max value.
@@ -185,7 +196,6 @@ def linear_weighted_backoff(metric, add, window=1000, min_backoff=0.5, max_backo
 
     return normalized
 
-
 def difference_to_ema(metric, window=125, steepness=1, reverse=False):
     """
     Calculate the difference between a metric and its Exponential Moving Average (EMA).
@@ -202,3 +212,18 @@ def difference_to_ema(metric, window=125, steepness=1, reverse=False):
     ema = metric.ewm(span=window, adjust=False).mean()
     return (np.tanh((metric - ema) * steepness) + 1) * 50
 
+def pct_difference_to_ema(metric, window=125, steepness=1, reverse=False):
+    """
+    Calculate the percentage difference between a metric and its Exponential Moving Average (EMA).
+
+    Parameters:
+    - metric: A pandas Series of the data to normalize.
+    - window: The lookback window size for the EMA.
+
+    Returns:
+    - A pandas Series with the percentage difference between the metric and its EMA.
+    """
+    if reverse:
+        metric = -metric
+    ema = metric.ewm(span=window, adjust=False).mean()
+    return (np.tanh(((metric - ema)/ ema)* steepness) + 1) * 50
