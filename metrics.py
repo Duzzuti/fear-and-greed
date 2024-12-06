@@ -51,3 +51,19 @@ class MarginStats(Metric):
     def normalize(self):
         # no normalization needed
         self.result = self.processed
+
+class AAIISentiment(Metric):
+    def __init__(self):
+        super().__init__()
+
+    def fetch(self):
+        # Load the AAII sentiment data
+        self.data = utils.get_repo_data("aaii_sentiment.csv", self.start_date, self.end_date)["Bull-Bear Spread"]
+
+    def calculate(self):
+        # no calculation needed
+        self.processed = self.data
+    
+    def normalize(self):
+        # Normalize the data
+        self.result = self.processed
