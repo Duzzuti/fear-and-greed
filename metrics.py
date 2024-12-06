@@ -1,5 +1,6 @@
 from metric_base import Metric
 import utils
+import numpy as np
 
 class SP500Momentum(Metric):
     def __init__(self, moving_avg_window=125):
@@ -84,3 +85,19 @@ class InsiderTransactions(Metric):
         # Normalize the data
         self.result = utils.difference_to_ema(self.processed, window=5, steepness=10)
 
+class PutCallRatio(Metric):
+    def __init__(self):
+        super().__init__()
+
+    def fetch(self):
+        # Load the put-call ratio data
+        self.data = utils.get_repo_data("put_call_ratios.csv", self.start_date, self.end_date)["PCR"]
+
+    def calculate(self):
+        # ffill the zeros
+        self.processed = self.data.replace(0, np.nan)
+        self.processed.ffill(inplace=True)
+
+    def normalize(self):
+        # Normalize the data
+        self.result = utils.difference_to_ema(self.processed, steepness=10, reverse=True).ewm(span=3).mean()
