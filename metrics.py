@@ -65,5 +65,21 @@ class AAIISentiment(Metric):
         self.processed = self.data
     
     def normalize(self):
-        # Normalize the data
+        # no normalization needed
+        self.result = self.processed
+
+class InsiderTransactions(Metric):
+    def __init__(self):
+        super().__init__()
+
+    def fetch(self):
+        # Load the insider transactions data
+        self.data = utils.get_repo_data("insider.csv", self.start_date, self.end_date)["Value"]
+
+    def calculate(self):
+        # no calculation needed
+        self.processed = self.data
+    
+    def normalize(self):
+        # TODO: Normalize the data (how does insider trading relate to market sentiment?)
         self.result = self.processed
