@@ -141,3 +141,21 @@ class SaveHavenDemand(Metric):
     
     def normalize(self):
         self.result = utils.difference_to_ema(self.processed, steepness=0.02)
+
+class JunkBondSpread(Metric):
+    def __init__(self):
+        super().__init__()
+
+    def fetch(self):
+        # Load the junk bond spread data
+        self.data = utils.fetch_fred_data("BAMLH0A0HYM2", self.data_dir, self.start_date, self.end_date)
+        self.data.ffill(inplace=True)
+
+    def calculate(self):
+        # no calculation needed
+        self.processed = self.data
+    
+    def normalize(self):
+        # Normalize the data
+        self.result = utils.difference_to_ema(self.processed, steepness=1, reverse=True, window=252)
+
