@@ -5,7 +5,7 @@ import numpy as np
 import datetime as dt
 import pandas_datareader.data as web
 
-import yf_exception_download
+from yf_exception_download import downloadWithExceptions, INVALID_TICKER
 import yfinance.exceptions as yf_exc
 
 
@@ -50,8 +50,8 @@ def fetch_yf_data(ticker, data_dir, start_date, end_date=None):
             # return data from start_date to end_date
             return data.loc[start_date:end_date]
     # if no file found, download new data
-    data, err = yf_exception_download(ticker, start=start_date, end=end_date + dt.timedelta(days=1))
-    if err == yf_exception_download.INVALID_TICKER:
+    data, err = downloadWithExceptions(ticker, start=start_date, end=end_date + dt.timedelta(days=1))
+    if err == INVALID_TICKER:
         new_ticker = None
         # open replacement list and check if ticker is in it
         with open("replacement_list.csv", "r") as f:
@@ -72,8 +72,8 @@ def fetch_yf_data(ticker, data_dir, start_date, end_date=None):
         
         while new_ticker != None:
             print(f"Fetching data for {new_ticker} instead of {ticker}...")
-            data, err = yf_exception_download(new_ticker, start=start_date, end=end_date + dt.timedelta(days=1))
-            if err == yf_exception_download.INVALID_TICKER:
+            data, err = downloadWithExceptions(new_ticker, start=start_date, end=end_date + dt.timedelta(days=1))
+            if err == INVALID_TICKER:
                 print(f"Error: replacement ticker is also invalid ({new_ticker}). Change replacement list.")
                 # remove the pair ticker, new_ticker from the replacement list
                 with open("replacement_list.csv", "r") as f:
