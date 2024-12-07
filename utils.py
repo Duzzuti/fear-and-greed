@@ -3,6 +3,8 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import datetime as dt
+import pandas_datareader.data as web
+
 import yf_exception_download
 import yfinance.exceptions as yf_exc
 
@@ -142,6 +144,10 @@ def fetch_sp500companies_data(data_dir, sp500_dir, start_date, end_date=dt.date.
     # save data to csv file
     data.to_csv(data_dir + f"{start_date}_{end_date}_sp500.csv")
     return data
+
+# TODO add file support
+def fetch_fred_data(name, data_dir, start_date, end_date=None):
+    return web.DataReader(name, "fred", start_date, end_date)
 
 def get_repo_data(file_name, start_date=None, end_date=None, dir="repoData/"):
     data = pd.read_csv(dir + file_name, index_col=0, parse_dates=True)
