@@ -232,4 +232,18 @@ def pct_difference_to_ema(metric, window=125, steepness=1, reverse=False):
     if reverse:
         metric = -metric
     ema = metric.ewm(span=window, adjust=False).mean()
-    return (np.tanh(((metric - ema)/ ema)* steepness) + 1) * 50
+    return (np.tanh(((metric - ema)/ abs(ema))* steepness) + 1) * 50
+
+def normalize_tanh(metric, steepness=1, shift=0, reverse=False):
+    """
+    Normalize data with a tanh function.
+
+    Parameters:
+    - metric: A pandas Series of the data to normalize.
+
+    Returns:
+    - A pandas Series with normalized values (0-100).
+    """
+    if reverse:
+        metric = -metric
+    return (np.tanh((metric + shift) * steepness) + 1) * 50
