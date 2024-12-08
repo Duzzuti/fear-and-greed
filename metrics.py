@@ -99,3 +99,97 @@ class PutCallRatio(Metric):
     def normalize(self):
         # Normalize the data
         self.result = utils.difference_to_ema(self.processed, steepness=10, reverse=True).ewm(span=3).mean()
+
+class ConsumerSentiment(Metric):
+    def __init__(self):
+        super().__init__()
+
+    def fetch(self):
+        # Load the consumer sentiment data
+        self.data = utils.fetch_fred_data("UMCSENT", self.data_dir, self.start_date, self.end_date)
+
+    def calculate(self):
+        # no calculation needed
+        self.processed = self.data
+    
+    def normalize(self):
+        # Normalize the data
+        self.result = utils.difference_to_ema(self.processed, steepness=0.2, window=24)
+
+class SaveHavenDemand(Metric):
+    def __init__(self, period=20, bond_weight=None):
+        super().__init__()
+        self.period = period
+        self.bond_weight = bond_weight
+
+    def fetch(self):
+        # Load the safe haven demand data
+        self.data = utils.fetch_yf_data("^SP500TR", self.data_dir, self.start_date, self.end_date)["Close"]
+        self.tnx = utils.fetch_yf_data("^TNX", self.data_dir, self.start_date, self.end_date)["Close"]
+
+    def calculate(self):
+        # calculate the period returns of the stock market
+        sp500_period_return = self.data.pct_change(self.period)
+        # calculate the return per annum
+        sp500_annual_return = ((1 + sp500_period_return) ** (252 / self.period) - 1) * 100
+        # calculate the difference between the first columns
+        bond_weight = self.bond_weight
+        if bond_weight == None:
+            bond_weight = 252 / self.period
+        sp500_annual_return["Diff"] = sp500_annual_return["^SP500TR"] - self.tnx["^TNX"] * bond_weight
+        self.processed = sp500_annual_return[["Diff"]]
+    
+    def normalize(self):
+        self.result = utils.difference_to_ema(self.processed, steepness=0.02)
+
+class JunkBondSpread(Metric):
+    def __init__(self):
+        super().__init__()
+
+    def fetch(self):
+        # Load the junk bond spread data
+        self.data = utils.fetch_fred_data("BAMLH0A0HYM2", self.data_dir, self.start_date, self.end_date)
+        self.data.ffill(inplace=True)
+
+    def calculate(self):
+        # no calculation needed
+        self.processed = self.data
+    
+    def normalize(self):
+        # Normalize the data
+        self.result = utils.difference_to_ema(self.processed, steepness=1, reverse=True, window=252)
+
+class YieldCurve(Metric):
+    def __init__(self):
+        super().__init__()
+
+    def fetch(self):
+        # Load the yield curve data
+        self.data = utils.fetch_fred_data("T10Y2Y", self.data_dir, self.start_date, self.end_date)
+        self.data.ffill(inplace=True)
+
+    def calculate(self):
+        self.processed = self.data
+    
+    def normalize(self):
+        # Normalize the data
+        self.result = utils.normalize_tanh(self.processed, shift=-1)
+        
+        # calculate derivative of the yield curve
+        self.test = (self.result.diff(periods=50) + 50).ewm(span=5).mean()
+
+class T10YearYield(Metric):
+    def __init__(self):
+        super().__init__()
+
+    def fetch(self):
+        # Load the 10 year yield data
+        self.data = utils.fetch_yf_data("^TNX", self.data_dir, self.start_date, self.end_date)["Close"]
+
+    def calculate(self):
+        # no calculation needed
+        self.processed = self.data
+    
+    def normalize(self):
+        # Normalize the data
+        self.result = utils.difference_to_ema(self.processed, steepness=1.5, window=500)

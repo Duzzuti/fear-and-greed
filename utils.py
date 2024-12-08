@@ -3,7 +3,9 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import datetime as dt
-import yf_exception_download
+import pandas_datareader.data as web
+
+from yf_exception_download import downloadWithExceptions, INVALID_TICKER
 import yfinance.exceptions as yf_exc
 
 
@@ -48,8 +50,8 @@ def fetch_yf_data(ticker, data_dir, start_date, end_date=None):
             # return data from start_date to end_date
             return data.loc[start_date:end_date]
     # if no file found, download new data
-    data, err = yf_exception_download(ticker, start=start_date, end=end_date + dt.timedelta(days=1))
-    if err == yf_exception_download.INVALID_TICKER:
+    data, err = downloadWithExceptions(ticker, start=start_date, end=end_date + dt.timedelta(days=1))
+    if err == INVALID_TICKER:
         new_ticker = None
         # open replacement list and check if ticker is in it
         with open("replacement_list.csv", "r") as f:
@@ -70,8 +72,8 @@ def fetch_yf_data(ticker, data_dir, start_date, end_date=None):
         
         while new_ticker != None:
             print(f"Fetching data for {new_ticker} instead of {ticker}...")
-            data, err = yf_exception_download(new_ticker, start=start_date, end=end_date + dt.timedelta(days=1))
-            if err == yf_exception_download.INVALID_TICKER:
+            data, err = downloadWithExceptions(new_ticker, start=start_date, end=end_date + dt.timedelta(days=1))
+            if err == INVALID_TICKER:
                 print(f"Error: replacement ticker is also invalid ({new_ticker}). Change replacement list.")
                 # remove the pair ticker, new_ticker from the replacement list
                 with open("replacement_list.csv", "r") as f:
@@ -142,6 +144,10 @@ def fetch_sp500companies_data(data_dir, sp500_dir, start_date, end_date=dt.date.
     # save data to csv file
     data.to_csv(data_dir + f"{start_date}_{end_date}_sp500.csv")
     return data
+
+# TODO add file support
+def fetch_fred_data(name, data_dir, start_date, end_date=None):
+    return web.DataReader(name, "fred", start_date, end_date)
 
 def get_repo_data(file_name, start_date=None, end_date=None, dir="repoData/"):
     data = pd.read_csv(dir + file_name, index_col=0, parse_dates=True)
@@ -226,4 +232,18 @@ def pct_difference_to_ema(metric, window=125, steepness=1, reverse=False):
     if reverse:
         metric = -metric
     ema = metric.ewm(span=window, adjust=False).mean()
-    return (np.tanh(((metric - ema)/ ema)* steepness) + 1) * 50
+    return (np.tanh(((metric - ema)/ abs(ema))* steepness) + 1) * 50
+
+def normalize_tanh(metric, steepness=1, shift=0, reverse=False):
+    """
+    Normalize data with a tanh function.
+
+    Parameters:
+    - metric: A pandas Series of the data to normalize.
+
+    Returns:
+    - A pandas Series with normalized values (0-100).
+    """
+    if reverse:
+        metric = -metric
+    return (np.tanh((metric + shift) * steepness) + 1) * 50
