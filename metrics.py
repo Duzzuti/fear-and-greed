@@ -159,3 +159,37 @@ class JunkBondSpread(Metric):
         # Normalize the data
         self.result = utils.difference_to_ema(self.processed, steepness=1, reverse=True, window=252)
 
+class YieldCurve(Metric):
+    def __init__(self):
+        super().__init__()
+
+    def fetch(self):
+        # Load the yield curve data
+        self.data = utils.fetch_fred_data("T10Y2Y", self.data_dir, self.start_date, self.end_date)
+        self.data.ffill(inplace=True)
+
+    def calculate(self):
+        self.processed = self.data
+    
+    def normalize(self):
+        # Normalize the data
+        self.result = utils.normalize_tanh(self.processed, shift=-1)
+        
+        # calculate derivative of the yield curve
+        self.test = (self.result.diff(periods=50) + 50).ewm(span=5).mean()
+
+class T10YearYield(Metric):
+    def __init__(self):
+        super().__init__()
+
+    def fetch(self):
+        # Load the 10 year yield data
+        self.data = utils.fetch_yf_data("^TNX", self.data_dir, self.start_date, self.end_date)["Close"]
+
+    def calculate(self):
+        # no calculation needed
+        self.processed = self.data
+    
+    def normalize(self):
+        # Normalize the data
+        self.result = utils.difference_to_ema(self.processed, steepness=1.5, window=500)
