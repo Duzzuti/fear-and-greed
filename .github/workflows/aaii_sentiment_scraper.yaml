@@ -40,8 +40,9 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin update-aaii-sentiment || true
-          git checkout -B update-aaii-sentiment origin/update-aaii-sentiment || git checkout -b update-aaii-sentiment
+          git fetch
+          git pull origin update-aaii-sentiment || exit 1
+          git checkout update-aaii-sentiment update-aaii-sentiment || git checkout -b update-aaii-sentiment
           
       # Step 6: Create a pull request
       - name: Create Pull Request

@@ -42,8 +42,8 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git fetch
-          git fetch origin update-insider-transactions || true
-          git checkout -B update-insider-transaction origin/update-insider-transaction || git checkout -b update-insider-transaction
+          git pull origin update-insider-transactions || exit 1
+          git checkout update-insider-transaction update-insider-transaction || git checkout -b update-insider-transaction
 
       # Step 6: Create a pull request
       - name: Create Pull Request

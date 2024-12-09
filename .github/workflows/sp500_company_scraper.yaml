@@ -41,8 +41,9 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin update-sp500-tickers || true
-          git checkout -B update-sp500-tickers origin/update-sp500-tickers || git checkout -b update-sp500-tickers
+          git fetch
+          git pull origin update-sp500-tickers || exit 1
+          git checkout update-sp500-tickers update-sp500-tickers || git checkout -b update-sp500-tickers
 
       # Step 6: Create a pull request
       - name: Create Pull Request

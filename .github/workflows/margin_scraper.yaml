@@ -42,8 +42,8 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git fetch
-          git fetch origin update-margin-data || true
-          git checkout -B update-margin-data origin/update-margin-data || git checkout -b update-margin-data
+          git pull origin update-margin-data || exit 1
+          git checkout update-margin-data update-margin-data || git checkout -b update-margin-data
 
       # Step 6: Create a pull request
       - name: Create Pull Request

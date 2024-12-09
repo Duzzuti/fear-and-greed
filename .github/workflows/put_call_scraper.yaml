@@ -40,8 +40,9 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin update-put-call || true
-          git checkout -B update-put-call origin/update-put-call || git checkout -b update-put-call
+          git fetch 
+          git pull origin update-put-call || exit 1
+          git checkout update-put-call update-put-call || git checkout -b update-put-call
           
       # Step 6: Create a pull request
       - name: Create Pull Request
