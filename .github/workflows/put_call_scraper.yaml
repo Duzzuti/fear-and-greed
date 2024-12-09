@@ -31,17 +31,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install pandas beautifulsoup4 requests
 
-      # Step 4: Run the scraper
-      - name: Run put call ratio scraper
-        run: python scraper/put_call_scraper.py
-
-      # Step 5: Create or update branch
+      # Step 4: Create or update branch
       - name: Create or update branch
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin update-put-call || true
-          git checkout -B update-put-call origin/update-put-call || git checkout -b update-put-call
+          git fetch
+          git checkout update-put-call || git checkout -b update-put-call
+          git pull || exit 1
+          git merge origin main || exit 1
+
+      # Step 5: Run the scraper
+      - name: Run put call ratio scraper
+        run: python scraper/put_call_scraper.py
           
       # Step 6: Create a pull request
       - name: Create Pull Request
