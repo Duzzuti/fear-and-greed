@@ -39,7 +39,7 @@ jobs:
           git fetch
           git checkout update-put-call || git checkout -b update-put-call
           git pull || exit 1
-          git merge origin main || exit 1
+          git merge origin/main || exit 1
 
       # Step 5: Run the scraper
       - name: Run put call ratio scraper
