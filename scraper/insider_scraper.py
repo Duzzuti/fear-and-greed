@@ -40,7 +40,6 @@ def scrape_insider():
                 print(f"({i})Failed to find the table. Retrying...")
                 time.sleep(random.randint(2, 5))
                 continue
-            print(len(soup.find_all('table')))
             table = soup.find_all('table')[1]
             if table is not None:
                 break
@@ -68,18 +67,13 @@ def scrape_insider():
     old_df = pd.read_csv('repoData/insider.csv')
     # get the last date in the old data
     last_date = pd.to_datetime(old_df['Date'].iloc[-1]).date()
-    # get days in month of last_date
-    if last_date + pd.Timedelta(days=calendar.monthrange(last_date.year, last_date.month)[1]) == date:
-        new_df = pd.concat([old_df, pd.DataFrame({"Date": date, "Value": value}, index=["Date"])], ignore_index=True)
+    # if months are equal add the data if it is different
+    if not(last_date.month == date.month and float(value) == float(old_df['Value'].iloc[-1])):
+        new_df = pd.concat([old_df, pd.DataFrame({"Date": pd.Timestamp.today().date(), "Value": value}, index=["Date"])], ignore_index=True)
         # save the new data
         new_df.to_csv('repoData/insider.csv', index=False)
-    elif last_date == date:
-        print("The data is already up-to-date.")
     else:
-        print("The data is not up-to-date.But also not as expected.")
-        print("Last date in the old data:", last_date)
-        print("Date in the new data:", date)
-        raise ValueError("The data is not as expected. Exiting...")
+        print("The data is already up-to-date.")
 
 if __name__ == "__main__":
     scrape_insider()
