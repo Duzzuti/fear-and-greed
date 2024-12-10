@@ -3,7 +3,6 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import random
 import time
-import calendar
 
 def scrape_insider():
     # data fetching
