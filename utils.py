@@ -71,18 +71,22 @@ def fetch_fred_data(name, data_dir, start_date, end_date=None):
             changed = False
             old_data_start = dt.datetime.strptime(file.split("_")[0], "%Y-%m-%d").date()
             old_data_end = dt.datetime.strptime(file.split("_")[1], "%Y-%m-%d").date()
+            new_start = old_data_start
+            new_end = old_data_end
             if start_date < old_data_start:
                 # load new data and add to the beginning of the old data
                 new_data = web.DataReader(name, "fred", start_date, old_data_start - dt.timedelta(days=1))
                 data = pd.concat([new_data, data])
                 changed = True
+                new_start = start_date
             if end_date > old_data_end:
                 # load new data and add to the end of the old data
                 new_data = web.DataReader(name, "fred", old_data_end + dt.timedelta(days=1), end_date)
                 data = pd.concat([data, new_data])
                 changed = True
+                new_end = end_date
             if changed:
-                data.to_csv(data_dir + f"{start_date}_{end_date}_{name}.csv")
+                data.to_csv(data_dir + f"{new_start}_{new_end}_{name}.csv")
                 # delete old file
                 os.remove(data_dir + file)
             # return data from start_date to end_date
