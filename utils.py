@@ -9,15 +9,19 @@ from yf_exception_download import downloadCompleteHandler
 # TODO fail if:
 # - note that the sp500 companies are not always the same and therefore our sp500 strength and breadth are wrong (cooked)
 
-# Fetch data from Yahoo Finance
-def fetch_yf_data(ticker, data_dir, start_date, end_date=None):
+# convert start_date and end_date to datetime objects set end_date to today if None
+def convert_to_dates(start_date, end_date):
     if end_date == None:
         end_date = dt.date.today()
-    # convert start_date and end_date to datetime objects
     if isinstance(start_date, str):
         start_date = dt.datetime.strptime(start_date, "%Y-%m-%d").date()
     if isinstance(end_date, str):
         end_date = dt.datetime.strptime(end_date, "%Y-%m-%d").date()
+    return start_date, end_date
+
+# Fetch data from Yahoo Finance
+def fetch_yf_data(ticker, data_dir, start_date, end_date=None):
+    start_date, end_date = convert_to_dates(start_date, end_date)
     # check if data is already saved to csv file
     # check if there is a file which ends with "_{ticker}.csv"
     for file in os.listdir(data_dir):
@@ -53,15 +57,9 @@ def fetch_yf_data(ticker, data_dir, start_date, end_date=None):
     data.to_csv(data_dir + f"{start_date}_{end_date}_{ticker}.csv")
     return data
 
-# TODO add file support
+# Fetch data from FRED
 def fetch_fred_data(name, data_dir, start_date, end_date=None):
-    if end_date == None:
-        end_date = dt.date.today()
-    # convert start_date and end_date to datetime objects
-    if isinstance(start_date, str):
-        start_date = dt.datetime.strptime(start_date, "%Y-%m-%d").date()
-    if isinstance(end_date, str):
-        end_date = dt.datetime.strptime(end_date, "%Y-%m-%d").date()
+    start_date, end_date = convert_to_dates(start_date, end_date)
     # check if data is already saved to csv file
     # check if there is a file which ends with "_{ticker}.csv"
     for file in os.listdir(data_dir):
@@ -105,7 +103,7 @@ def get_repo_data(file_name, start_date=None, end_date=None, dir="repoData/"):
         data = data[data.index <= end_date]
     return data
 
-def fetch_sp500companies_data(data_dir, sp500_dir, start_date, end_date=dt.date.today()):
+def fetch_sp500companies_data(data_dir, sp500_dir, start_date, end_date=None):
     def load_data_for_all_companies(start_date, end_date):
         sp500_tickers = pd.read_csv(data_dir + "sp500_companies.csv", header=0)
         sp500_dict = {}
@@ -119,13 +117,7 @@ def fetch_sp500companies_data(data_dir, sp500_dir, start_date, end_date=dt.date.
             exit()
         return pd.concat(sp500_dict, axis=1)
 
-    # convert start_date and end_date to datetime objects
-    if isinstance(start_date, str):
-        start_date = dt.datetime.strptime(start_date, "%Y-%m-%d").date()
-    if isinstance(end_date, str):
-        end_date = dt.datetime.strptime(end_date, "%Y-%m-%d").date()
-    
-
+    start_date, end_date = convert_to_dates(start_date, end_date)
     # check if data is already saved to csv file
     # check if there is a file which ends with "_sp500.csv"
     for file in os.listdir(data_dir):
