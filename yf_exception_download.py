@@ -5,6 +5,7 @@ import yfinance.shared as yf_shared
 
 INVALID_TICKER = "INVALID TICKER"
 NO_DATA_IN_RANGE = "NO DATA IN RANGE"
+DEBUG_ERROR = "DEBUG ERROR"
 
 def downloadWithExceptions(ticker : str, start=None, end=None):
     ticker = ticker.upper()
@@ -44,3 +45,49 @@ def downloadWithExceptions(ticker : str, start=None, end=None):
             print(f"Unhandled error occurred: {full_err}")
             exit()
     return (data, err)
+
+def downloadCompleteHandler(ticker : str, start=None, end=None):
+    start_ticker = ticker
+    err = DEBUG_ERROR
+    while err:
+        data, err = downloadWithExceptions(ticker, start=start, end=end)
+        if err == INVALID_TICKER:
+            if start_ticker != ticker:
+                print(f"Error: {ticker} is not a valid ticker replacement for {start_ticker}.")
+                # remove from replacement list
+                with open("replacement_list.csv", "r") as f:
+                    replacements = f.readlines()
+                with open("replacement_list.csv", "w") as f:
+                    for replacement in replacements:
+                        old, new_ticker = replacement.strip().split(",")
+                        if old != start_ticker:
+                            f.write(f"{old},{new_ticker}\n")
+            new_ticker = None
+            # check replacement list for new ticker
+            with open("replacement_list.csv", "r") as f:
+                replacements = f.readlines()
+            for replacement in replacements:
+                old, new_ticker = replacement.strip().split(",")
+                if old == ticker:
+                    break
+            else:
+                print(f"Error: Invalid ticker: {ticker}. Add to replacement list.")
+                while not new_ticker or new_ticker == ticker:
+                    new_ticker = input("Enter new (correct) ticker or 'QUIT' to exit: ")
+                    if new_ticker == "QUIT":
+                        exit()
+                with open("replacement_list.csv", "a") as f:
+                    f.write(f"{ticker},{new_ticker}\n")
+                print("Replacement list updated.")
+            ticker = new_ticker
+        elif err == NO_DATA_IN_RANGE:
+            # check if the SPY has data for the range
+            _, err = downloadWithExceptions("SPY", start=start, end=end)
+            if err != NO_DATA_IN_RANGE:
+                print(f"Error: No data for {ticker} in range {start} to {end}.")
+                exit()
+            else:
+                break
+    return data
+
+    

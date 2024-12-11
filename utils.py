@@ -1,18 +1,12 @@
 import os
-import yfinance as yf
 import pandas as pd
 import numpy as np
 import datetime as dt
 import pandas_datareader.data as web
 
-from yf_exception_download import downloadWithExceptions, INVALID_TICKER
-import yfinance.exceptions as yf_exc
-
+from yf_exception_download import downloadCompleteHandler
 
 # TODO fail if:
-# - only holidays in the range
-# - ticker is valid but not yet listed in the range
-# - add the error handling download to the first part of fetch_yf_data
 # - note that the sp500 companies are not always the same and therefore our sp500 strength and breadth are wrong (cooked)
 
 # Fetch data from Yahoo Finance
@@ -35,12 +29,12 @@ def fetch_yf_data(ticker, data_dir, start_date, end_date=None):
             old_data_end = dt.datetime.strptime(file.split("_")[1], "%Y-%m-%d").date()
             if start_date < old_data_start:
                 # load new data and add to the beginning of the old data
-                new_data = yf.download(ticker, start=start_date, end=old_data_start)
+                new_data = downloadCompleteHandler(ticker, start=start_date, end=old_data_start)
                 data = pd.concat([new_data, data])
                 changed = True
             if end_date > old_data_end:
                 # load new data and add to the end of the old data
-                new_data = yf.download(ticker, start=old_data_end + dt.timedelta(days=1), end=end_date + dt.timedelta(days=1))
+                new_data = downloadCompleteHandler(ticker, start=old_data_end + dt.timedelta(days=1), end=end_date + dt.timedelta(days=1))
                 data = pd.concat([data, new_data])
                 changed = True
             if changed:
@@ -50,44 +44,7 @@ def fetch_yf_data(ticker, data_dir, start_date, end_date=None):
             # return data from start_date to end_date
             return data.loc[start_date:end_date]
     # if no file found, download new data
-    data, err = downloadWithExceptions(ticker, start=start_date, end=end_date + dt.timedelta(days=1))
-    if err == INVALID_TICKER:
-        new_ticker = None
-        # open replacement list and check if ticker is in it
-        with open("replacement_list.csv", "r") as f:
-            replacements = f.readlines()
-        for replacement in replacements:
-            old, new_ticker = replacement.strip().split(",")
-            if old == ticker:
-                break
-        else:
-            print(f"Error: Invalid ticker: {ticker}. Add to replacement list.")
-            while not new_ticker:
-                new_ticker = input("Enter new (correct) ticker or 'QUIT' to exit: ")
-                if new_ticker == "QUIT":
-                    exit()
-            with open("replacement_list.csv", "a") as f:
-                f.write(f"{ticker},{new_ticker}\n")
-            print("Replacement list updated.")
-        
-        while new_ticker != None:
-            print(f"Fetching data for {new_ticker} instead of {ticker}...")
-            data, err = downloadWithExceptions(new_ticker, start=start_date, end=end_date + dt.timedelta(days=1))
-            if err == INVALID_TICKER:
-                print(f"Error: replacement ticker is also invalid ({new_ticker}). Change replacement list.")
-                # remove the pair ticker, new_ticker from the replacement list
-                with open("replacement_list.csv", "r") as f:
-                    replacements = f.readlines()
-                with open("replacement_list.csv", "w") as f:
-                    for replacement in replacements:
-                        old, _ = replacement.strip().split(",")
-                        if old != ticker:
-                            f.write(replacement)
-                while not new_ticker:
-                    new_ticker = input("Enter new (correct) ticker or 'QUIT' to exit: ")
-                    if new_ticker == "QUIT":
-                        exit()
-                
+    data = downloadCompleteHandler(ticker, start=start_date, end=end_date + dt.timedelta(days=1))      
     # save data to csv file
     data.to_csv(data_dir + f"{start_date}_{end_date}_{ticker}.csv")
     return data
