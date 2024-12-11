@@ -27,18 +27,22 @@ def fetch_yf_data(ticker, data_dir, start_date, end_date=None):
             changed = False
             old_data_start = dt.datetime.strptime(file.split("_")[0], "%Y-%m-%d").date()
             old_data_end = dt.datetime.strptime(file.split("_")[1], "%Y-%m-%d").date()
+            new_start = old_data_start
+            new_end = old_data_end
             if start_date < old_data_start:
                 # load new data and add to the beginning of the old data
                 new_data = downloadCompleteHandler(ticker, start=start_date, end=old_data_start)
                 data = pd.concat([new_data, data])
                 changed = True
+                new_start = start_date
             if end_date > old_data_end:
                 # load new data and add to the end of the old data
                 new_data = downloadCompleteHandler(ticker, start=old_data_end + dt.timedelta(days=1), end=end_date + dt.timedelta(days=1))
                 data = pd.concat([data, new_data])
                 changed = True
+                new_end = end_date
             if changed:
-                data.to_csv(data_dir + f"{start_date}_{end_date}_{ticker}.csv")
+                data.to_csv(data_dir + f"{new_start}_{new_end}_{ticker}.csv")
                 # delete old file
                 os.remove(data_dir + file)
             # return data from start_date to end_date
@@ -47,6 +51,54 @@ def fetch_yf_data(ticker, data_dir, start_date, end_date=None):
     data = downloadCompleteHandler(ticker, start=start_date, end=end_date + dt.timedelta(days=1))      
     # save data to csv file
     data.to_csv(data_dir + f"{start_date}_{end_date}_{ticker}.csv")
+    return data
+
+# TODO add file support
+def fetch_fred_data(name, data_dir, start_date, end_date=None):
+    if end_date == None:
+        end_date = dt.date.today()
+    # convert start_date and end_date to datetime objects
+    if isinstance(start_date, str):
+        start_date = dt.datetime.strptime(start_date, "%Y-%m-%d").date()
+    if isinstance(end_date, str):
+        end_date = dt.datetime.strptime(end_date, "%Y-%m-%d").date()
+    # check if data is already saved to csv file
+    # check if there is a file which ends with "_{ticker}.csv"
+    for file in os.listdir(data_dir):
+        if file.endswith(f"_{name}.csv"):
+            # check whether we need to download new data
+            data = pd.read_csv(data_dir + file, index_col=0, parse_dates=True, header=[0])
+            changed = False
+            old_data_start = dt.datetime.strptime(file.split("_")[0], "%Y-%m-%d").date()
+            old_data_end = dt.datetime.strptime(file.split("_")[1], "%Y-%m-%d").date()
+            if start_date < old_data_start:
+                # load new data and add to the beginning of the old data
+                new_data = web.DataReader(name, "fred", start_date, old_data_start - dt.timedelta(days=1))
+                data = pd.concat([new_data, data])
+                changed = True
+            if end_date > old_data_end:
+                # load new data and add to the end of the old data
+                new_data = web.DataReader(name, "fred", old_data_end + dt.timedelta(days=1), end_date)
+                data = pd.concat([data, new_data])
+                changed = True
+            if changed:
+                data.to_csv(data_dir + f"{start_date}_{end_date}_{name}.csv")
+                # delete old file
+                os.remove(data_dir + file)
+            # return data from start_date to end_date
+            return data.loc[start_date:end_date]
+    # if no file found, download new data
+    data = web.DataReader(name, "fred", start_date, end_date)      
+    # save data to csv file
+    data.to_csv(data_dir + f"{start_date}_{end_date}_{name}.csv")
+    return data
+
+def get_repo_data(file_name, start_date=None, end_date=None, dir="repoData/"):
+    data = pd.read_csv(dir + file_name, index_col=0, parse_dates=True)
+    if start_date:
+        data = data[data.index >= start_date]
+    if end_date:
+        data = data[data.index <= end_date]
     return data
 
 def fetch_sp500companies_data(data_dir, sp500_dir, start_date, end_date=dt.date.today()):
@@ -100,18 +152,6 @@ def fetch_sp500companies_data(data_dir, sp500_dir, start_date, end_date=dt.date.
     data = load_data_for_all_companies(start_date, end_date)
     # save data to csv file
     data.to_csv(data_dir + f"{start_date}_{end_date}_sp500.csv")
-    return data
-
-# TODO add file support
-def fetch_fred_data(name, data_dir, start_date, end_date=None):
-    return web.DataReader(name, "fred", start_date, end_date)
-
-def get_repo_data(file_name, start_date=None, end_date=None, dir="repoData/"):
-    data = pd.read_csv(dir + file_name, index_col=0, parse_dates=True)
-    if start_date:
-        data = data[data.index >= start_date]
-    if end_date:
-        data = data[data.index <= end_date]
     return data
 
 
