@@ -46,12 +46,15 @@ def downloadWithExceptions(ticker : str, start=None, end=None):
             exit()
     return (data, err)
 
-def downloadCompleteHandler(ticker : str, start=None, end=None):
+def downloadCompleteHandler(ticker : str, start=None, end=None, ignore_no_data=False):
     start_ticker = ticker
     err = DEBUG_ERROR
     while err:
         data, err = downloadWithExceptions(ticker, start=start, end=end)
-        if err == INVALID_TICKER:
+        if err and "." in ticker:
+            # try replacing the dot with dash
+            data, err = downloadWithExceptions(ticker.replace(".", "-"), start=start, end=end)
+        if err == INVALID_TICKER or (ignore_no_data and err == NO_DATA_IN_RANGE):
             if start_ticker != ticker:
                 print(f"Error: {ticker} is not a valid ticker replacement for {start_ticker}.")
                 # remove from replacement list
@@ -62,7 +65,7 @@ def downloadCompleteHandler(ticker : str, start=None, end=None):
                         old, new_ticker = replacement.strip().split(",")
                         if old != start_ticker:
                             f.write(f"{old},{new_ticker}\n")
-            new_ticker = None
+
             # check replacement list for new ticker
             with open("replacement_list.csv", "r") as f:
                 replacements = f.readlines()
@@ -71,11 +74,24 @@ def downloadCompleteHandler(ticker : str, start=None, end=None):
                 if old == ticker:
                     break
             else:
-                print(f"Error: Invalid ticker: {ticker}. Add to replacement list.")
+                new_ticker = None
+                if ignore_no_data and err == NO_DATA_IN_RANGE:
+                    print(f"Error: No data for {ticker} in range {start} to {end}. Add to replacement list.")
+                else:
+                    print(f"Error: Invalid ticker: {ticker}. Add to replacement list.")
                 while not new_ticker or new_ticker == ticker:
-                    new_ticker = input("Enter new (correct) ticker or 'QUIT' to exit: ")
+                    if ignore_no_data:
+                        with open("test_data/sp500_possible_replacements.csv", "r") as f:
+                            content = f.readlines()
+                        for line in content:
+                            if line.startswith(ticker):
+                                print(f"Possible replacements for {ticker}: {','.join(line.split(',')[1:])}")
+                                break
+                    new_ticker = input("Enter new (correct) ticker, 'SKIP' to ignore ths ticker or 'QUIT' to exit: ")
                     if new_ticker == "QUIT":
                         exit()
+                    elif new_ticker == "SKIP":
+                        return data
                 with open("replacement_list.csv", "a") as f:
                     f.write(f"{ticker},{new_ticker}\n")
                 print("Replacement list updated.")
@@ -86,6 +102,7 @@ def downloadCompleteHandler(ticker : str, start=None, end=None):
             if err != NO_DATA_IN_RANGE:
                 print(f"Error: No data for {ticker} in range {start} to {end}.")
                 exit()
+                # raise ValueError(NO_DATA_IN_RANGE)
             else:
                 break
     return data
