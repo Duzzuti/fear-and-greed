@@ -193,3 +193,19 @@ class T10YearYield(Metric):
     def normalize(self):
         # Normalize the data
         self.result = utils.difference_to_ema(self.processed, steepness=1.5, window=500)
+    
+class StockPriceBreadth(Metric):
+    def __init__(self):
+        super().__init__()
+
+    def fetch(self):
+        # Load the stock price breadth data
+        self.data = utils.get_repo_data("breadth_ratio.csv", self.start_date, self.end_date)["Breadth Ratio"]
+
+    def calculate(self):
+        # no calculation needed
+        self.processed = self.data
+    
+    def normalize(self):
+        # Normalize the data
+        self.result = utils.normalize_tanh(self.processed.ewm(span=10).mean(), steepness=7, shift=-0.5)
