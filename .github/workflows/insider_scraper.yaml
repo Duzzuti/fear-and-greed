@@ -63,6 +63,8 @@ jobs:
       - name: Push changes
         if: env.pr_exists == 'true'
         run: |
+          git add repoData/insider.csv
+          git commit -m "Update insider trading data [ci skip]"
           git push origin update-insider-transaction || git push origin update-insider-transaction --set-upstream
           
       # Step 8: Create a pull request
