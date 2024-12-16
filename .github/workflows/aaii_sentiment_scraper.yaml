@@ -63,7 +63,7 @@ jobs:
       - name: Push changes
         if: env.pr_exists == 'true'
         run: |
-          git add repoData/aaii_sentiment.csv
+          git add repoData/aaii_sentiment.csv || exit 0
           git commit -m "Update AAII Sentiment data [ci skip]"
           git push origin update-aaii-sentiment || git push origin update-aaii-sentiment --set-upstream
 
