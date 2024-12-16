@@ -64,8 +64,8 @@ jobs:
       - name: Push changes
         if: env.pr_exists == 'true'
         run: |
-          git add repoData/sp500_companies.csv || exit 0
-          git commit -m "Update S&P 500 tickers [ci skip]"
+          git add repoData/sp500_companies.csv
+          git commit -m "Update S&P 500 tickers [ci skip]" || exit 0
           git push origin update-sp500-tickers || git push origin update-sp500-tickers --set-upstream
           
       # Step 8: Create a pull request
