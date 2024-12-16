@@ -67,7 +67,7 @@ def scrape_insider():
     # get the last date in the old data
     last_date = pd.to_datetime(old_df['Date'].iloc[-1]).date()
     # if months are equal add the data if it is different
-    if not(last_date.month == date.month and float(value) == float(old_df['Value'].iloc[-1])):
+    if last_date.month != date.month or (float(value) != float(old_df['Value'].iloc[-1] and date != last_date)):
         new_df = pd.concat([old_df, pd.DataFrame({"Date": pd.Timestamp.today().date(), "Value": value}, index=["Date"])], ignore_index=True)
         # save the new data
         new_df.to_csv('repoData/insider.csv', index=False)
