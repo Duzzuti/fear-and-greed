@@ -70,17 +70,19 @@ def scrape_margin_stats():
     df["Leverage Ratio"] = df["Debit"] / df["Credit"]
     df["Leverage Ratio"] -= 1.5
     df["Leverage Ratio"] = (np.tanh(df["Leverage Ratio"]*2) + 1) *50
-   
     # open the old data file and appending possible new data
-    old_df = pd.read_csv('repoData/margin_stats.csv')
+    old_df = pd.read_csv('repoData/margin_stats.csv', index_col=0, parse_dates=True)
+    old_df.index = old_df.index.date
+    old_df.index.rename('Date', inplace=True)
     # get the last date in the old data
-    last_date = pd.to_datetime(old_df['Date'].iloc[-1]).date()
+    last_date = old_df.index[-1]
     # get the new data
     new_df = df[df.index > last_date]
+    new_df.index.rename('Date', inplace=True)
     # append the new data to the old data
-    new_df = pd.concat([old_df, new_df], ignore_index=True)
+    new_df = pd.concat([old_df, new_df])
     # save the new data
-    new_df.to_csv('repoData/margin_stats.csv', index=False)
+    new_df.to_csv('repoData/margin_stats.csv')
 
 if __name__ == "__main__":
     scrape_margin_stats()
