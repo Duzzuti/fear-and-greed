@@ -57,8 +57,19 @@ def downloadWithExceptions(ticker : str, start=None, end=None):
             exit()
     return (data, err)
 
-def downloadCompleteHandler(ticker : str, start=None, end=None, ignore_no_data=False):
+def downloadCompleteHandler(ticker : str, start=None, end=None, ignore_no_data=False, check_replacement_first=False):
     start_ticker = ticker
+    if check_replacement_first:
+        with open("repoData/replacement_list.csv", "r") as f:
+            replacements = f.readlines()
+        for replacement in replacements:
+            old, new_ticker = replacement.strip().split(",")
+            if old == ticker:
+                if new_ticker:
+                    ticker = new_ticker
+                else:
+                    return None
+                break
     err = DEBUG_ERROR
     err_count = 0
     while err:
@@ -76,16 +87,16 @@ def downloadCompleteHandler(ticker : str, start=None, end=None, ignore_no_data=F
             if start_ticker != ticker:
                 print(f"Error: {ticker} is not a valid ticker replacement for {start_ticker}.")
                 # remove from replacement list
-                with open("replacement_list.csv", "r") as f:
+                with open("repoData/replacement_list.csv", "r") as f:
                     replacements = f.readlines()
-                with open("replacement_list.csv", "w") as f:
+                with open("repoData/replacement_list.csv", "w") as f:
                     for replacement in replacements:
                         old, new_ticker = replacement.strip().split(",")
                         if old != start_ticker:
                             f.write(f"{old},{new_ticker}\n")
 
             # check replacement list for new ticker
-            with open("replacement_list.csv", "r") as f:
+            with open("repoData/replacement_list.csv", "r") as f:
                 replacements = f.readlines()
             for replacement in replacements:
                 old, new_ticker = replacement.strip().split(",")
@@ -118,7 +129,7 @@ def downloadCompleteHandler(ticker : str, start=None, end=None, ignore_no_data=F
                         exit()
                     elif new_ticker == "SKIP":
                         return data
-                with open("replacement_list.csv", "a") as f:
+                with open("repoData/replacement_list.csv", "a") as f:
                     f.write(f"{ticker},{new_ticker}\n")
                 print("Replacement list updated.")
             ticker = new_ticker

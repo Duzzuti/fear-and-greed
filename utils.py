@@ -17,7 +17,8 @@ def convert_to_dates(start_date, end_date):
     return start_date, end_date
 
 # Fetch data from Yahoo Finance
-def fetch_yf_data(ticker, data_dir, start_date, end_date=None, ignore_no_data=False):
+def fetch_yf_data(ticker, data_dir, start_date, end_date=None, ignore_no_data=False, load_full_data=False):
+    check_repl = not load_full_data
     start_date, end_date = convert_to_dates(start_date, end_date)
     # check if data is already saved to csv file
     # check if there is a file which ends with "_{ticker}.csv"
@@ -32,13 +33,13 @@ def fetch_yf_data(ticker, data_dir, start_date, end_date=None, ignore_no_data=Fa
             new_end = old_data_end
             if start_date < old_data_start:
                 # load new data and add to the beginning of the old data
-                new_data = downloadCompleteHandler(ticker, start=start_date, end=old_data_start, ignore_no_data=ignore_no_data)
+                new_data = downloadCompleteHandler(ticker, start=start_date, end=old_data_start, ignore_no_data=ignore_no_data, check_replacement_first=check_repl)
                 data = pd.concat([new_data, data])
                 changed = True
                 new_start = start_date
             if end_date > old_data_end:
                 # load new data and add to the end of the old data
-                new_data = downloadCompleteHandler(ticker, start=old_data_end + dt.timedelta(days=1), end=end_date + dt.timedelta(days=1), ignore_no_data=ignore_no_data)
+                new_data = downloadCompleteHandler(ticker, start=old_data_end + dt.timedelta(days=1), end=end_date + dt.timedelta(days=1), ignore_no_data=ignore_no_data, check_replacement_first=check_repl)
                 data = pd.concat([data, new_data])
                 changed = True
                 new_end = end_date
@@ -49,7 +50,7 @@ def fetch_yf_data(ticker, data_dir, start_date, end_date=None, ignore_no_data=Fa
             # return data from start_date to end_date
             return data.loc[start_date:end_date]
     # if no file found, download new data
-    data = downloadCompleteHandler(ticker, start=start_date, end=end_date + dt.timedelta(days=1), ignore_no_data=ignore_no_data)
+    data = downloadCompleteHandler(ticker, start=start_date, end=end_date + dt.timedelta(days=1), ignore_no_data=ignore_no_data, check_replacement_first=check_repl)
     # skip data if it is invalid (empty replacement entry)
     if type(data) != pd.DataFrame:
         if data == None:
@@ -134,11 +135,16 @@ def get_sp500_possible_replacements(data_dir):
     df = df.T
     df.to_csv(data_dir + "sp500_possible_replacements.csv")
 
-def load_sp500_data(data_dir):
+def load_sp500_data(data_dir, start=None, load_full_data=False):
     # get ticker, start, end df
     # get yf data for each ticker and desired time frame
     # take one year of data for each ticker earlier than start_date
     sp500df = get_repo_data("sp500_companies.csv")
+    if start != None:
+        start = pd.to_datetime(start).date()
+        tmp = sp500df[sp500df.index <= start]
+        if not tmp.empty:
+            sp500df = sp500df[tmp.index[-1]:]
     if not os.path.exists(data_dir + "sp500/"):
         os.mkdir(data_dir + "sp500/")
     companies = set()
@@ -157,12 +163,63 @@ def load_sp500_data(data_dir):
             # get one year of data for each ticker earlier than start_date
             while True:
                 try:
-                    fetch_yf_data(ticker, data_dir + "sp500/", index - pd.Timedelta(days=365) , last_date, ignore_no_data=True)
+                    fetch_yf_data(ticker, data_dir + "sp500/", index - pd.Timedelta(days=365) , last_date, ignore_no_data=True, load_full_data=load_full_data)
                 except Exception as e:
                     print(f"Error fetching {ticker}: {e}")
                     continue
                 break
-                
+
+def update_date_count(data_dir, repo_path="repoData/", load_full_data=False):
+    # create a dictionary with the date as key and the number of csv files that contain the date as value
+    try:
+        if load_full_data:
+            raise FileNotFoundError()
+        old_date_count = pd.read_csv(repo_path + "date_count.csv")
+        last_date = old_date_count["Date"].iloc[-1]
+    except FileNotFoundError:
+        print("Loading full data...")
+        last_date = "1996-01-01"
+        old_date_count = pd.DataFrame(columns=["Date", "Count"])
+    # remove 366 days, because we first increment later
+    first_update = (pd.to_datetime(last_date).date() - pd.DateOffset(days=366)).date()
+
+    df_list = []
+    # iterate over all csv files in test_data/sp500 folder
+    for file in os.listdir(data_dir + "sp500/"):
+        if file.endswith(".csv"):
+            # read csv file
+            df = pd.read_csv(f"{data_dir}sp500/{file}", header=[0,1], index_col=0)
+            if pd.to_datetime(df.index[-1]).date() < first_update:
+                continue
+            df_list.append(df)
+
+    today = pd.Timestamp.today().date()
+    date_dict = {}
+
+    # iterate over all csv files in test_data/sp500 folder
+    while first_update < today:
+        first_update += pd.DateOffset(days=1)
+        first_update = first_update.date()
+        date_dict[first_update] = 0
+        for df in df_list:
+            file_start_date = df.index[0]
+            file_end_date = df.index[-1]
+            if pd.to_datetime(file_start_date).date() <= first_update <= pd.to_datetime(file_end_date).date():
+                # search for an entry with the current date
+                if first_update.strftime("%Y-%m-%d") in df.index:
+                    date_dict[first_update] += 1
+        if date_dict[first_update] == 0:
+            date_dict.pop(first_update)
+
+    last_index = len(old_date_count)
+    for date, count in date_dict.items():
+        # replace old entry with new entry
+        last_index += 1
+        old_date_count = old_date_count[old_date_count["Date"] != date.strftime("%Y-%m-%d")]
+        old_date_count.loc[last_index] = [date.strftime("%Y-%m-%d"), count]
+
+    old_date_count.sort_values(by="Date", inplace=True)
+    old_date_count.to_csv(repo_path + "date_count.csv", index=False)                
 
 
 def linear_weighted_backoff(metric, add, window=1000, min_backoff=0.5, max_backoff=0.5, reverse_max=None):
