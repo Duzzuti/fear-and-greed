@@ -203,9 +203,25 @@ class StockPriceBreadth(Metric):
         self.data = utils.get_repo_data("breadth_ratio.csv", self.start_date, self.end_date)["Breadth Ratio"]
 
     def calculate(self):
+        # flatten the data
+        self.processed = self.data.ewm(span=100, min_periods=50).mean() * 100
+    
+    def normalize(self):
+        # Normalize the data
+        self.result = utils.normalize_tanh(self.processed, steepness=0.3, shift=-50)
+
+class StockPriceStrength(Metric):
+    def __init__(self):
+        super().__init__()
+
+    def fetch(self):
+        # Load the stock price strength data
+        self.data = utils.get_repo_data("strength_ratio.csv", self.start_date, self.end_date)["Strength"]
+
+    def calculate(self):
         # no calculation needed
         self.processed = self.data
     
     def normalize(self):
-        # Normalize the data
-        self.result = utils.normalize_tanh(self.processed.ewm(span=10).mean(), steepness=7, shift=-0.5)
+        # No normalization needed
+        self.result = self.processed
