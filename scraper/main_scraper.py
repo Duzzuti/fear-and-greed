@@ -1,5 +1,6 @@
 import sys
 for path in sys.path:
+    print(path)
     if path.endswith("\\fear-and-greed\\scraper"):
         sys.path.append(path.split("\\fear-and-greed\\scraper")[0] + "\\fear-and-greed")
         break
