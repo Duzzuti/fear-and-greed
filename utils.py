@@ -157,10 +157,10 @@ def update_trading_days(data_dir):
         if last_date < pd.Timestamp.today().date():
             df = yf.download("^GSPC", start=last_date)
             df.index = pd.to_datetime(df.index).date
-            # remove last_date from trading days
-            trading_days = trading_days[trading_days.index != last_date]
-            trading_days = pd.concat([trading_days, df])
-            trading_days.to_csv(data_dir + "trading_days.csv")
+            df = df[df.index != last_date]
+            if not df.empty:
+                trading_days = pd.concat([trading_days, df])
+                trading_days.to_csv(data_dir + "trading_days.csv")
     else:
         yf.download("^GSPC", start="1995-01-01").to_csv(data_dir + "trading_days.csv")
 
