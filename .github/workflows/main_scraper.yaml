@@ -50,7 +50,7 @@ jobs:
           if [[ -z $(git status --porcelain) ]]; then
             echo "No changes to commit."
           else
-            git add *
-            git commit -m "Update Data [ci skip]" || exit 0
+            git add -A  # Adds all changes, respecting .gitignore
+            git commit -m "Update Data [ci skip]" || echo "No changes to commit, skipping push."
             git push origin main || git push origin main --set-upstream
           fi
