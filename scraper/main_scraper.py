@@ -1,9 +1,8 @@
 import sys
-for path in sys.path:
-    print(path)
-    if path.endswith("\\fear-and-greed\\scraper"):
-        sys.path.append(path.split("\\fear-and-greed\\scraper")[0] + "\\fear-and-greed")
-        break
-import utils
+import os
 
+# Add the parent directory to sys.path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+
+import utils
 utils.fetch_all("data/", "2000-01-01")

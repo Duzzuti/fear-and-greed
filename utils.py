@@ -4,7 +4,7 @@ import yfinance as yf
 
 from scraper.aaii_scraper import scrape_aaii
 from scraper.insider_scraper import scrape_insider
-from scraper.margin_stats_scraper import scrape_margin_stats
+from scraper.margin_scraper import scrape_margin_stats
 from scraper.put_call_scraper import scrape_put_call
 from scraper.sp500_company_scraper import scrape_companies
 from metric_base import Metric
