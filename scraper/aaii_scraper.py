@@ -6,6 +6,14 @@ import random
 import time
 
 def scrape_aaii():
+    # open the old data file
+    old_df = pd.read_csv('repoData/aaii_sentiment.csv')
+    # get the last date in the old data
+    last_date = pd.to_datetime(old_df['Date'].iloc[-1]).date()
+    if last_date + pd.Timedelta(days=5) > pd.Timestamp.today().date():
+        print("No new data available.")
+        return
+
     # data fetching
     max_tries = 5
     for i in range(max_tries):
@@ -67,10 +75,6 @@ def scrape_aaii():
     df['Date'] = df['Date'].apply(lambda x: pd.to_datetime(x + ' ' + str(today.year)).date() if pd.to_datetime(x + ' ' + str(today.year)) < today else pd.to_datetime(x + ' ' + str(today.year - 1)).date())
     # reverse the table
     df = df.iloc[::-1]
-    # open the old data file and appending possible new data
-    old_df = pd.read_csv('repoData/aaii_sentiment.csv')
-    # get the last date in the old data
-    last_date = pd.to_datetime(old_df['Date'].iloc[-1]).date()
     # get the new data
     new_df = df[df['Date'] > last_date]
     # append the new data to the old data

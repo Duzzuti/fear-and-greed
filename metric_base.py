@@ -1,4 +1,9 @@
 import datetime as dt
+import pandas as pd
+import numpy as np
+import os
+
+import utils
 
 class Metric:
     data_dir = None
@@ -24,6 +29,7 @@ class Metric:
         self.fetch()
         self.calculate()
         self.normalize()
+        self.reindex()
         return self.result
     
     def fetch(self):
@@ -34,3 +40,16 @@ class Metric:
 
     def normalize(self):
         raise NotImplementedError
+
+    def reindex(self):
+        # get the date_count.csv
+        date_count = utils.get_repo_data("date_count.csv", self.start_date, self.end_date)
+        # add all dates to result
+        self.result = self.result.reindex(pd.date_range(self.start_date, self.end_date), fill_value=np.nan)
+        self.result.ffill(inplace=True)
+        self.result = self.result.reindex(date_count.index, fill_value=np.nan)
+    
+    def save(self):
+        if not os.path.exists("indicatorData/"):
+            os.mkdir("indicatorData/")
+        self.result.to_csv("indicatorData/{}.csv".format(self.name))
