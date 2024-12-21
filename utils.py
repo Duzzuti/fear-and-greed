@@ -3,8 +3,16 @@ import pandas as pd
 import numpy as np
 import datetime as dt
 import pandas_datareader.data as web
+import yfinance as yf
 
 from yf_exception_download import downloadCompleteHandler
+from scraper.aaii_scraper import scrape_aaii
+from scraper.insider_scraper import scrape_insider
+from scraper.margin_stats_scraper import scrape_margin_stats
+from scraper.put_call_scraper import scrape_put_call
+from scraper.sp500_company_scraper import scrape_companies
+from metric_base import Metric
+from metrics import YieldCurve, T10YearYield, JunkBondSpread, SaveHavenDemand, ConsumerSentiment, SP500Momentum, PutCallRatio, InsiderTransactions, AAIISentiment, MarginStats, VIX, StockPriceBreadth, StockPriceStrength
 
 # convert start_date and end_date to datetime objects set end_date to today if None
 def convert_to_dates(start_date, end_date):
@@ -17,7 +25,7 @@ def convert_to_dates(start_date, end_date):
     return start_date, end_date
 
 # Fetch data from Yahoo Finance
-def fetch_yf_data(ticker, data_dir, start_date, end_date=None, ignore_no_data=False, load_full_data=False):
+def fetch_yf_data(ticker, data_dir, start_date, end_date=None, ignore_no_data=False, load_full_data=False, reload_last_date=True):
     check_repl = not load_full_data
     start_date, end_date = convert_to_dates(start_date, end_date)
     # check if data is already saved to csv file
@@ -37,9 +45,15 @@ def fetch_yf_data(ticker, data_dir, start_date, end_date=None, ignore_no_data=Fa
                 data = pd.concat([new_data, data])
                 changed = True
                 new_start = start_date
-            if end_date > old_data_end:
+            if end_date > old_data_end or (end_date >= old_data_end and reload_last_date):
                 # load new data and add to the end of the old data
-                new_data = downloadCompleteHandler(ticker, start=old_data_end + dt.timedelta(days=1), end=end_date + dt.timedelta(days=1), ignore_no_data=ignore_no_data, check_replacement_first=check_repl)
+                if reload_last_date:
+                    new_data = downloadCompleteHandler(ticker, start=old_data_end, end=end_date + dt.timedelta(days=1), ignore_no_data=ignore_no_data, check_replacement_first=check_repl)
+                else:
+                    new_data = downloadCompleteHandler(ticker, start=old_data_end + dt.timedelta(days=1), end=end_date + dt.timedelta(days=1), ignore_no_data=ignore_no_data, check_replacement_first=check_repl)
+                # remove last row if it is the same as the first row of the new data
+                if new_data.index[0] == data.index[-1]:
+                    data = data.iloc[:-1]
                 data = pd.concat([data, new_data])
                 changed = True
                 new_end = end_date
@@ -100,6 +114,7 @@ def fetch_fred_data(name, data_dir, start_date, end_date=None):
     return data
 
 def get_repo_data(file_name, start_date=None, end_date=None, dir="repoData/"):
+    start_date, end_date = convert_to_dates(start_date, end_date)
     data = pd.read_csv(dir + file_name, index_col=0, parse_dates=True)
     data.index = pd.to_datetime(data.index).date
     if start_date:
@@ -139,6 +154,9 @@ def load_sp500_data(data_dir, start=None, load_full_data=False):
     # get ticker, start, end df
     # get yf data for each ticker and desired time frame
     # take one year of data for each ticker earlier than start_date
+    # TODO reload last date of each ticker that has recent data in comparison with the last date in the repo
+    # TODO handle if the sp500 components changed but data is already loaded??
+    update_trading_days(data_dir)
     sp500df = get_repo_data("sp500_companies.csv")
     if start != None:
         start = pd.to_datetime(start).date()
@@ -169,7 +187,7 @@ def load_sp500_data(data_dir, start=None, load_full_data=False):
                     continue
                 break
 
-def update_date_count(data_dir, repo_path="repoData/", load_full_data=False):
+def update_date_count(data_dir, repo_path="repoData/", load_full_data=False, allow_skip=True):
     # create a dictionary with the date as key and the number of csv files that contain the date as value
     try:
         if load_full_data:
@@ -178,6 +196,7 @@ def update_date_count(data_dir, repo_path="repoData/", load_full_data=False):
         last_date = old_date_count["Date"].iloc[-1]
     except FileNotFoundError:
         print("Loading full data...")
+        allow_skip = False
         last_date = "1996-01-01"
         old_date_count = pd.DataFrame(columns=["Date", "Count"])
     # remove 366 days, because we first increment later
@@ -195,6 +214,20 @@ def update_date_count(data_dir, repo_path="repoData/", load_full_data=False):
 
     today = pd.Timestamp.today().date()
     date_dict = {}
+
+    # process the last date again and if it matches, we should be able to skip older dates
+    if allow_skip:
+        count = 0
+        skip_update_date = pd.to_datetime(last_date).date()
+        for df in df_list:
+            file_start_date = df.index[0]
+            file_end_date = df.index[-1]
+            if pd.to_datetime(file_start_date).date() <= skip_update_date <= pd.to_datetime(file_end_date).date():
+                # search for an entry with the current date
+                if skip_update_date.strftime("%Y-%m-%d") in df.index:
+                    count += 1
+        if count == old_date_count["Count"].iloc[-1]:
+            first_update = skip_update_date
 
     # iterate over all csv files in test_data/sp500 folder
     while first_update < today:
@@ -220,6 +253,167 @@ def update_date_count(data_dir, repo_path="repoData/", load_full_data=False):
 
     old_date_count.sort_values(by="Date", inplace=True)
     old_date_count.to_csv(repo_path + "date_count.csv", index=False)                
+
+def update_trading_days(data_dir):
+    if os.path.exists(data_dir + "trading_days.csv"):
+        trading_days = pd.read_csv(data_dir + "trading_days.csv", index_col=0, header=[0,1])
+        trading_days.index = pd.to_datetime(trading_days.index).date
+        last_date = trading_days.index[-1]
+        if last_date < pd.Timestamp.today().date():
+            yf.download("^GSPC", start=last_date).to_csv(data_dir + "trading_days.csv", mode='a', header=False)
+    else:
+        yf.download("^GSPC", start="1995-01-01").to_csv(data_dir + "trading_days.csv")
+
+def update_breadth_data(sp500_dir, df_breadth, trading_days):
+    last_breadth_date = df_breadth.index[-1]
+    df_list = []
+    # iterate over all csv files in sp500 folder
+    for file in os.listdir(sp500_dir):
+        if file.endswith(".csv"):
+            # read csv file
+            df = pd.read_csv(f"{sp500_dir}{file}", header=[0,1], index_col=0)
+            if df.index[-1] < last_breadth_date.strftime("%Y-%m-%d"):
+                continue
+            file_start_date = file.split("_")[0]
+            file_start_date = pd.to_datetime(file_start_date).date() + pd.DateOffset(days=365)
+            first_relevant_date = max(file_start_date.strftime("%Y-%m-%d"), last_breadth_date.strftime("%Y-%m-%d"))
+            # init date is the date that needs to be added to calculate the difference for the first date (the first date before the first relevant date in date_count_data)
+            init_date = trading_days.index[(trading_days.index < first_relevant_date)][-1]
+            # use date_count_data to add missing dates between the first relevant date and the last date
+            df = df.reindex(trading_days.index[(trading_days.index <= df.index[-1])], fill_value=None)
+            # fill any nans after the first valid value but before the last valid value
+            # Identify the indices to forward-fill
+            ffill_mask = df.notna() | df.bfill().notna()
+            # Forward-fill the data
+            df = df.ffill().where(ffill_mask)
+            # remove all irrelevant data
+            df = df[df.index >= init_date]
+            df_list.append(df)
+
+    # Process each ticker
+    for df in df_list:
+        # Calculate the daily price change
+        df['Change'] = df['Adj Close'].diff()
+        
+        # Define volumes for "up" and "down" days
+        df['Volume Up'] = df['Volume'].where(df['Change'] > 0, 0)  # Volume for "up" days
+        df['Volume Down'] = df['Volume'].where(df['Change'] < 0, 0)  # Volume for "down" days
+
+    if not df_list:
+        print("No new data to process")
+    else:
+        # Combine all tickers' data
+        combined_breadth = pd.concat(df_list).groupby(level=0).sum()
+        # Calculate total breadth
+        res = combined_breadth['Volume Up'] / (combined_breadth['Volume Down'] + combined_breadth['Volume Up'])
+        res.fillna(0.5, inplace=True)
+        res = pd.DataFrame(res, columns=['Breadth Ratio'], index=combined_breadth.index)
+        # drop first row
+        res = res[1:]
+        res = pd.concat([df_breadth[df_breadth.index != last_breadth_date], res])
+        res.to_csv("repoData/breadth_ratio.csv", index_label="Date")
+
+def update_strength_data(sp500_dir, df_strength, trading_days):
+    last_strength_date = df_strength.index[-1]
+    num_highs = {}
+    num_lows = {}
+    trading_days.index = pd.to_datetime(trading_days.index).date
+    for date in trading_days.index:
+        if date >= last_strength_date:
+            num_highs[date] = 0
+            num_lows[date] = 0
+    # iterate over all csv files in sp500 folder
+    for file in os.listdir(sp500_dir):
+        if file.endswith(".csv"):
+            # read csv file
+            df = pd.read_csv(f"{sp500_dir}{file}", header=[0,1], index_col=0, parse_dates=True)["Adj Close"]
+            df.index = pd.to_datetime(df.index).date
+            if df.index[-1] < last_strength_date:
+                continue
+            file_start_date = file.split("_")[0]
+            actual_start_date = max((pd.to_datetime(file_start_date).date() + pd.DateOffset(days=365)).date(), last_strength_date)
+            # add all trading days that are missing in the dataframe
+            df = df.reindex(trading_days.index, axis=0)
+            # Identify the indices to forward-fill
+            ffill_mask = df.notna() | df.bfill().notna()
+            # Forward-fill the data
+            df = df.ffill().where(ffill_mask)
+            df.dropna(inplace=True)
+            # get row that is after actual_start_date
+            first_valid_row = df[df.index >= actual_start_date].iloc[0]
+            load_data_since = (first_valid_row.name - pd.DateOffset(days=365)).date()
+            year_high = df.loc[df[(df.index <= first_valid_row.name) & (df.index >= load_data_since)].idxmax()].iloc[0]
+            year_low = df.loc[df[(df.index <= first_valid_row.name) & (df.index >= load_data_since)].idxmin()].iloc[0]
+            current_row_index = df.index.get_loc(first_valid_row.name)
+            current_row = first_valid_row
+            while current_row_index < len(df) - 1 and current_row.notna().all():
+                if current_row.iloc[0] >= year_high.iloc[0]:
+                    year_high = current_row
+                elif current_row.iloc[0] <= year_low.iloc[0]:
+                    year_low = current_row
+                else:
+                    one_year_ago = (current_row.name - pd.DateOffset(days=365)).date()
+                    if year_high.name < one_year_ago:
+                        # calculate year_high again where the date is less than one year ago from the current date
+                        year_high = df.loc[df[(df.index >= one_year_ago) & (df.index <= current_row.name)].idxmax()].iloc[0]
+                    if year_low.name < one_year_ago:
+                        # calculate year_low again
+                        year_low = df.loc[df[(df.index >= one_year_ago) & (df.index <= current_row.name)].idxmin()].iloc[0]
+                if current_row.iloc[0] >= year_high.iloc[0] - (year_high.iloc[0] - year_low.iloc[0]) * 0.2:
+                    num_highs[current_row.name] += 1
+                if current_row.iloc[0] <= year_low.iloc[0] + (year_high.iloc[0] - year_low.iloc[0]) * 0.2:
+                    num_lows[current_row.name] += 1
+                current_row_index += 1
+                current_row = df.iloc[current_row_index]
+    df = pd.DataFrame((num_highs, num_lows), index=["Num Highs", "Num Lows"]).T
+    df["Strength"] = df["Num Highs"] / (df["Num Highs"] + df["Num Lows"]) * 100
+    df.to_csv("price_strength_tmp.csv")
+
+def load_strength_breadth_data(data_dir):
+    df_strength = get_repo_data("strength_ratio.csv")
+    df_breadth = get_repo_data("breadth_ratio.csv")
+    last_strength_date = df_strength.index[-1]
+    last_breadth_date = df_breadth.index[-1]
+    sp500_dir = data_dir + "sp500/"
+
+    # Load ticker data
+    load_sp500_data(data_dir, start=min(last_strength_date, last_breadth_date))
+    update_date_count(data_dir)
+
+    trading_days = pd.read_csv(data_dir + "trading_days.csv", index_col=0, header=[0,1])
+    
+    update_breadth_data(sp500_dir, df_breadth, trading_days)
+    update_strength_data(sp500_dir, df_strength, trading_days)
+
+def fetch_all(data_dir, start_date, end_date=dt.date.today()):
+    # Scrape all data
+    scrape_aaii()
+    scrape_insider()
+    scrape_margin_stats()
+    scrape_put_call()
+    scrape_companies()
+
+    load_strength_breadth_data(data_dir)
+    
+    Metric.setPreferences(data_dir, start_date, end_date)
+    metrics = []
+    metrics.append(T10YearYield())
+    metrics.append(JunkBondSpread())
+    metrics.append(SaveHavenDemand())
+    metrics.append(ConsumerSentiment())
+    metrics.append(SP500Momentum())
+    metrics.append(PutCallRatio())
+    metrics.append(InsiderTransactions())
+    metrics.append(AAIISentiment())
+    metrics.append(MarginStats())
+    metrics.append(VIX())
+    metrics.append(StockPriceBreadth())
+    metrics.append(StockPriceStrength())
+    metrics.append(YieldCurve())
+    for metric in metrics:
+        metric.get()
+        metric.save()
+    return metrics
 
 
 def linear_weighted_backoff(metric, add, window=1000, min_backoff=0.5, max_backoff=0.5, reverse_max=None):
