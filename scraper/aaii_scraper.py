@@ -10,7 +10,7 @@ def scrape_aaii():
     old_df = pd.read_csv('repoData/aaii_sentiment.csv')
     # get the last date in the old data
     last_date = pd.to_datetime(old_df['Date'].iloc[-1]).date()
-    if last_date + pd.Timedelta(days=5) > pd.Timestamp.today().date():
+    if last_date + pd.Timedelta(days=5) >= pd.Timestamp.today().date():
         print("No new data available.")
         return
 
@@ -73,6 +73,8 @@ def scrape_aaii():
     # than the current date, in that case we add the previous year
     today = pd.Timestamp.today()
     df['Date'] = df['Date'].apply(lambda x: pd.to_datetime(x + ' ' + str(today.year)).date() if pd.to_datetime(x + ' ' + str(today.year)) < today else pd.to_datetime(x + ' ' + str(today.year - 1)).date())
+    df['Date'] = df['Date'] + pd.DateOffset(1)
+    df['Date'] = pd.to_datetime(df['Date']).dt.date
     # reverse the table
     df = df.iloc[::-1]
     # get the new data

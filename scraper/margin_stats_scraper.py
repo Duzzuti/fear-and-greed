@@ -6,6 +6,14 @@ import random
 import time
 
 def scrape_margin_stats():
+    # open the old data file
+    old_df = pd.read_csv('repoData/margin_stats.csv')
+    # get the last date in the old data
+    last_date = pd.to_datetime(old_df['Date'].iloc[-1]).date()
+    if pd.to_datetime(last_date + pd.DateOffset(months=1) - pd.DateOffset(days=1)).date() > pd.Timestamp.today().date():
+        print("No new data available.")
+        return
+
     # data fetching
     max_tries = 5
     for i in range(max_tries):
@@ -70,13 +78,18 @@ def scrape_margin_stats():
     df["Leverage Ratio"] = df["Debit"] / df["Credit"]
     df["Leverage Ratio"] -= 1.5
     df["Leverage Ratio"] = (np.tanh(df["Leverage Ratio"]*2) + 1) *50
+
+    df.index = df.index + pd.DateOffset(months=1) + pd.DateOffset(days=16)
+    df.index = pd.to_datetime(df.index).dt.date
    
-    # open the old data file and appending possible new data
-    old_df = pd.read_csv('repoData/margin_stats.csv')
-    # get the last date in the old data
-    last_date = pd.to_datetime(old_df['Date'].iloc[-1]).date()
     # get the new data
-    new_df = df[df.index > last_date]
+    new_df = df[(df.index > last_date) & (df.index.month != last_date.month)]
+    if new_df.empty:
+        print("The data is already up-to-date.")
+        return
+    # if the last entry is in the today's month, change the last entry date to today
+    if new_df.index[-1].month == pd.Timestamp.today().month:
+        new_df.index[-1] = pd.Timestamp.today().date()
     # append the new data to the old data
     new_df = pd.concat([old_df, new_df], ignore_index=True)
     # save the new data
