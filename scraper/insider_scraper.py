@@ -3,11 +3,19 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import random
 import time
-import calendar
 
 def scrape_insider():
     # data fetching
     max_tries = 5
+    # open the old data file
+    old_df = pd.read_csv('repoData/insider.csv')
+    # get the last date in the old data
+    last_date = pd.to_datetime(old_df['Date'].iloc[-1]).date()
+    # if months are equal add the data if it is different
+    if last_date.month == date.month and (float(value) == float(old_df['Value'].iloc[-1]) or pd.Timestamp.today().date() == last_date):
+        print("No new data available.")
+        return
+
     for i in range(max_tries):
         user_agents = [
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
@@ -40,7 +48,6 @@ def scrape_insider():
                 print(f"({i})Failed to find the table. Retrying...")
                 time.sleep(random.randint(2, 5))
                 continue
-            print(len(soup.find_all('table')))
             table = soup.find_all('table')[1]
             if table is not None:
                 break
@@ -63,23 +70,9 @@ def scrape_insider():
     date = pd.to_datetime(date, format='%Y-%m-%d', errors='coerce').date()
     # get value
     value = df['Value'].iloc[0]
-   
-    # open the old data file and appending possible new data
-    old_df = pd.read_csv('repoData/insider.csv')
-    # get the last date in the old data
-    last_date = pd.to_datetime(old_df['Date'].iloc[-1]).date()
-    # get days in month of last_date
-    if last_date + pd.Timedelta(days=calendar.monthrange(last_date.year, last_date.month)[1]) == date:
-        new_df = pd.concat([old_df, pd.DataFrame({"Date": date, "Value": value}, index=["Date"])], ignore_index=True)
-        # save the new data
-        new_df.to_csv('repoData/insider.csv', index=False)
-    elif last_date == date:
-        print("The data is already up-to-date.")
-    else:
-        print("The data is not up-to-date.But also not as expected.")
-        print("Last date in the old data:", last_date)
-        print("Date in the new data:", date)
-        raise ValueError("The data is not as expected. Exiting...")
+    new_df = pd.concat([old_df, pd.DataFrame({"Date": pd.Timestamp.today().date(), "Value": value}, index=["Date"])], ignore_index=True)
+    # save the new data
+    new_df.to_csv('repoData/insider.csv', index=False)
 
 if __name__ == "__main__":
     scrape_insider()

@@ -4,7 +4,7 @@ import pandas as pd
 import random
 import time
 
-def scrape_aaii():
+def scrape_put_call():
     # data fetching
     max_tries = 5
     for i in range(max_tries):
@@ -74,4 +74,4 @@ def scrape_aaii():
 
 
 if __name__ == "__main__":
-    scrape_aaii()
+    scrape_put_call()
