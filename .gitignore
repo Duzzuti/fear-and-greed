@@ -2,7 +2,7 @@
 .vscode
 backupData
 data
-test_data
+test_data*
 
 
 # Byte-compiled / optimized / DLL files

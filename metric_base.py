@@ -1,4 +1,3 @@
-import datetime as dt
 import pandas as pd
 import numpy as np
 import os
@@ -9,6 +8,7 @@ class Metric:
     data_dir = None
     start_date = None
     end_date = None
+    trading_days = None
 
     def __init__(self):
         self.data = None
@@ -18,10 +18,11 @@ class Metric:
         self.name = self.__class__.__name__
     
     @classmethod
-    def setPreferences(cls, data_dir, start_date, end_date=dt.date.today()):
+    def setPreferences(cls, data_dir, start_date, end_date=pd.Timestamp.today().date()):
         cls.data_dir = data_dir
         cls.start_date = start_date
         cls.end_date = end_date
+        cls.trading_days = pd.read_csv(data_dir + "trading_days.csv", index_col=0, header=[0,1])
 
     def get(self):
         if self.data_dir is None or self.start_date is None:

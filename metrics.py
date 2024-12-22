@@ -9,7 +9,7 @@ class SP500Momentum(Metric):
 
     def fetch(self):
         # Fetch the S&P 500 data
-        self.data = utils.fetch_yf_data("^GSPC", self.data_dir, self.start_date, self.end_date)["Close"]
+        self.data = utils.fetch_yf_data("^GSPC", self.data_dir, self.start_date, self.end_date, trading_days=self.trading_days)["Close"]
 
     def calculate(self):
         # Calculate the momentum
@@ -25,7 +25,7 @@ class VIX(Metric):
 
     def fetch(self):
         # Fetch the VIX data
-        self.data = utils.fetch_yf_data("^VIX", self.data_dir, self.start_date, self.end_date)["Close"]
+        self.data = utils.fetch_yf_data("^VIX", self.data_dir, self.start_date, self.end_date, trading_days=self.trading_days)["Close"]
 
     def calculate(self):
         # no calculation needed
@@ -89,7 +89,7 @@ class PutCallRatio(Metric):
 
     def fetch(self):
         # Load the put-call ratio data
-        self.data = utils.get_repo_data("put_call_ratios.csv", self.start_date, self.end_date)["PCR"]
+        self.data = utils.get_repo_data("put_call_ratios.csv", self.start_date, self.end_date)
 
     def calculate(self):
         # ffill the zeros
@@ -124,8 +124,8 @@ class SaveHavenDemand(Metric):
 
     def fetch(self):
         # Load the safe haven demand data
-        self.data = utils.fetch_yf_data("^SP500TR", self.data_dir, self.start_date, self.end_date)["Close"]
-        self.tnx = utils.fetch_yf_data("^TNX", self.data_dir, self.start_date, self.end_date)["Close"]
+        self.data = utils.fetch_yf_data("^SP500TR", self.data_dir, self.start_date, self.end_date, trading_days=self.trading_days)["Close"]
+        self.tnx = utils.fetch_yf_data("^TNX", self.data_dir, self.start_date, self.end_date, trading_days=self.trading_days)["Close"]
 
     def calculate(self):
         # calculate the period returns of the stock market
@@ -184,7 +184,7 @@ class T10YearYield(Metric):
 
     def fetch(self):
         # Load the 10 year yield data
-        self.data = utils.fetch_yf_data("^TNX", self.data_dir, self.start_date, self.end_date)["Close"]
+        self.data = utils.fetch_yf_data("^TNX", self.data_dir, self.start_date, self.end_date, trading_days=self.trading_days)["Close"]
 
     def calculate(self):
         # no calculation needed

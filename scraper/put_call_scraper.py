@@ -70,6 +70,9 @@ def scrape_put_call():
     df = df.iloc[::-1]
     # get the new data
     new_df = df[df['Date'] > last_date]
+    if new_df.empty:
+        print("No new data available.")
+        return
     # append the new data to the old data
     new_df = pd.concat([old_df, new_df], ignore_index=True)
     # save the new data
