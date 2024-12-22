@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 import numpy as np
-import datetime as dt
 import pandas_datareader.data as web
 import yfinance as yf
 
@@ -17,15 +16,15 @@ from metrics import YieldCurve, T10YearYield, JunkBondSpread, SaveHavenDemand, C
 # convert start_date and end_date to datetime objects set end_date to today if None
 def convert_to_dates(start_date, end_date):
     if end_date == None:
-        end_date = dt.date.today()
+        end_date = pd.Timestamp.today().date()
     if isinstance(start_date, str):
-        start_date = dt.datetime.strptime(start_date, "%Y-%m-%d").date()
+        start_date = pd.to_datetime(start_date).date()
     if isinstance(end_date, str):
-        end_date = dt.datetime.strptime(end_date, "%Y-%m-%d").date()
+        end_date = pd.to_datetime(end_date).date()
     return start_date, end_date
 
 # Fetch data from Yahoo Finance
-def fetch_yf_data(ticker, data_dir, start_date, end_date=None, ignore_no_data=False, load_full_data=False, reload_last_date=True):
+def fetch_yf_data(ticker, data_dir, start_date, end_date=None, ignore_no_data=False, load_full_data=False, reload_last_date=True, trading_days=None):
     check_repl = not load_full_data
     start_date, end_date = convert_to_dates(start_date, end_date)
     # check if data is already saved to csv file
@@ -35,36 +34,67 @@ def fetch_yf_data(ticker, data_dir, start_date, end_date=None, ignore_no_data=Fa
             # check whether we need to download new data
             data = pd.read_csv(data_dir + file, index_col=0, parse_dates=True, header=[0,1])
             changed = False
-            old_data_start = dt.datetime.strptime(file.split("_")[0], "%Y-%m-%d").date()
-            old_data_end = dt.datetime.strptime(file.split("_")[1], "%Y-%m-%d").date()
+            old_data_start = pd.to_datetime(file.split("_")[0]).date()
+            old_data_end = pd.to_datetime(file.split("_")[1]).date()
             new_start = old_data_start
             new_end = old_data_end
             if start_date < old_data_start:
                 # load new data and add to the beginning of the old data
-                new_data = downloadCompleteHandler(ticker, start=start_date, end=old_data_start, ignore_no_data=ignore_no_data, check_replacement_first=check_repl)
-                data = pd.concat([new_data, data])
+                new_data = downloadCompleteHandler(
+                    ticker, 
+                    start=start_date, 
+                    end=old_data_start, 
+                    ignore_no_data=ignore_no_data, 
+                    check_replacement_first=check_repl,
+                    trading_days=trading_days
+                )
+                if not new_data.empty:
+                    data = pd.concat([new_data, data])
                 changed = True
                 new_start = start_date
             if end_date > old_data_end or (end_date >= old_data_end and reload_last_date):
                 # load new data and add to the end of the old data
                 if reload_last_date:
-                    new_data = downloadCompleteHandler(ticker, start=old_data_end, end=end_date + dt.timedelta(days=1), ignore_no_data=ignore_no_data, check_replacement_first=check_repl)
+                    new_data = downloadCompleteHandler(
+                        ticker, 
+                        start=old_data_end, 
+                        end=(end_date + pd.DateOffset(days=1)).date(), 
+                        ignore_no_data=ignore_no_data, 
+                        check_replacement_first=check_repl,
+                        trading_days=trading_days
+                    )
                 else:
-                    new_data = downloadCompleteHandler(ticker, start=old_data_end + dt.timedelta(days=1), end=end_date + dt.timedelta(days=1), ignore_no_data=ignore_no_data, check_replacement_first=check_repl)
-                # remove last row if it is the same as the first row of the new data
-                if new_data.index[0] == data.index[-1]:
-                    data = data.iloc[:-1]
-                data = pd.concat([data, new_data])
+                    new_data = downloadCompleteHandler(
+                        ticker, 
+                        start=(old_data_end + pd.DateOffset(days=1)).date(), 
+                        end=(end_date + pd.DateOffset(days=1)).date(), 
+                        ignore_no_data=ignore_no_data, 
+                        check_replacement_first=check_repl,
+                        trading_days=trading_days
+                    )
+                if not new_data.empty:
+                    # remove last row if it is the same as the first row of the new data
+                    if new_data.index[0] == data.index[-1]:
+                        data = data.iloc[:-1]
+                    data = pd.concat([data, new_data])
                 changed = True
                 new_end = end_date
             if changed:
                 data.to_csv(data_dir + f"{new_start}_{new_end}_{ticker}.csv")
                 # delete old file
-                os.remove(data_dir + file)
+                if file != f"{new_start}_{new_end}_{ticker}.csv":
+                    os.remove(data_dir + file)
             # return data from start_date to end_date
             return data.loc[start_date:end_date]
     # if no file found, download new data
-    data = downloadCompleteHandler(ticker, start=start_date, end=end_date + dt.timedelta(days=1), ignore_no_data=ignore_no_data, check_replacement_first=check_repl)
+    data = downloadCompleteHandler(
+        ticker, 
+        start=start_date, 
+        end=(end_date + pd.DateOffset(days=1)).date(), 
+        ignore_no_data=ignore_no_data, 
+        check_replacement_first=check_repl,
+        trading_days=trading_days
+    )
     # skip data if it is invalid (empty replacement entry)
     if type(data) != pd.DataFrame:
         if data == None:
@@ -85,19 +115,19 @@ def fetch_fred_data(name, data_dir, start_date, end_date=None):
             # check whether we need to download new data
             data = pd.read_csv(data_dir + file, index_col=0, parse_dates=True, header=[0])
             changed = False
-            old_data_start = dt.datetime.strptime(file.split("_")[0], "%Y-%m-%d").date()
-            old_data_end = dt.datetime.strptime(file.split("_")[1], "%Y-%m-%d").date()
+            old_data_start = pd.to_datetime(file.split("_")[0]).date()
+            old_data_end = pd.to_datetime(file.split("_")[1]).date()
             new_start = old_data_start
             new_end = old_data_end
             if start_date < old_data_start:
                 # load new data and add to the beginning of the old data
-                new_data = web.DataReader(name, "fred", start_date, old_data_start - dt.timedelta(days=1))
+                new_data = web.DataReader(name, "fred", start_date, (old_data_start - pd.DateOffset(days=1)).date())
                 data = pd.concat([new_data, data])
                 changed = True
                 new_start = start_date
             if end_date > old_data_end:
                 # load new data and add to the end of the old data
-                new_data = web.DataReader(name, "fred", old_data_end + dt.timedelta(days=1), end_date)
+                new_data = web.DataReader(name, "fred", (old_data_end + pd.DateOffset(days=1)).date(), end_date)
                 data = pd.concat([data, new_data])
                 changed = True
                 new_end = end_date
@@ -154,9 +184,8 @@ def load_sp500_data(data_dir, start=None, load_full_data=False):
     # get ticker, start, end df
     # get yf data for each ticker and desired time frame
     # take one year of data for each ticker earlier than start_date
-    # TODO reload last date of each ticker that has recent data in comparison with the last date in the repo
-    # TODO handle if the sp500 components changed but data is already loaded??
     update_trading_days(data_dir)
+    trading_days = pd.read_csv(data_dir + "trading_days.csv", index_col=0, header=[0,1])
     sp500df = get_repo_data("sp500_companies.csv")
     if start != None:
         start = pd.to_datetime(start).date()
@@ -177,11 +206,19 @@ def load_sp500_data(data_dir, start=None, load_full_data=False):
             if last_occurrence == sp500df.index[-1]:
                 last_date = None
             else:
-                last_date = sp500df.index[sp500df.index.get_loc(last_occurrence) + 1] - pd.Timedelta(days=1)
+                last_date = (sp500df.index[sp500df.index.get_loc(last_occurrence) + 1] - pd.DateOffset(days=1)).date()
             # get one year of data for each ticker earlier than start_date
             while True:
                 try:
-                    fetch_yf_data(ticker, data_dir + "sp500/", index - pd.Timedelta(days=365) , last_date, ignore_no_data=True, load_full_data=load_full_data)
+                    fetch_yf_data(
+                        ticker, 
+                        data_dir + "sp500/", 
+                        (index - pd.DateOffset(days=365)).date(), 
+                        last_date,
+                        ignore_no_data=True, 
+                        load_full_data=load_full_data,
+                        trading_days=trading_days
+                    )
                 except Exception as e:
                     print(f"Error fetching {ticker}: {e}")
                     continue
@@ -260,7 +297,12 @@ def update_trading_days(data_dir):
         trading_days.index = pd.to_datetime(trading_days.index).date
         last_date = trading_days.index[-1]
         if last_date < pd.Timestamp.today().date():
-            yf.download("^GSPC", start=last_date).to_csv(data_dir + "trading_days.csv", mode='a', header=False)
+            df = yf.download("^GSPC", start=last_date)
+            df.index = pd.to_datetime(df.index).date
+            # remove last_date from trading days
+            trading_days = trading_days[trading_days.index != last_date]
+            trading_days = pd.concat([trading_days, df])
+            trading_days.to_csv(data_dir + "trading_days.csv")
     else:
         yf.download("^GSPC", start="1995-01-01").to_csv(data_dir + "trading_days.csv")
 
@@ -346,7 +388,7 @@ def update_strength_data(sp500_dir, df_strength, trading_days):
             year_low = df.loc[df[(df.index <= first_valid_row.name) & (df.index >= load_data_since)].idxmin()].iloc[0]
             current_row_index = df.index.get_loc(first_valid_row.name)
             current_row = first_valid_row
-            while current_row_index < len(df) - 1 and current_row.notna().all():
+            while current_row_index < len(df) and current_row.notna().all():
                 if current_row.iloc[0] >= year_high.iloc[0]:
                     year_high = current_row
                 elif current_row.iloc[0] <= year_low.iloc[0]:
@@ -364,10 +406,13 @@ def update_strength_data(sp500_dir, df_strength, trading_days):
                 if current_row.iloc[0] <= year_low.iloc[0] + (year_high.iloc[0] - year_low.iloc[0]) * 0.2:
                     num_lows[current_row.name] += 1
                 current_row_index += 1
+                if current_row_index >= len(df):
+                    break
                 current_row = df.iloc[current_row_index]
     df = pd.DataFrame((num_highs, num_lows), index=["Num Highs", "Num Lows"]).T
     df["Strength"] = df["Num Highs"] / (df["Num Highs"] + df["Num Lows"]) * 100
-    df.to_csv("price_strength_tmp.csv")
+    res = pd.concat([df_strength[df_strength.index != last_strength_date], df])
+    res.to_csv("repoData/strength_ratio.csv", index_label="Date")
 
 def load_strength_breadth_data(data_dir):
     df_strength = get_repo_data("strength_ratio.csv")
@@ -377,24 +422,34 @@ def load_strength_breadth_data(data_dir):
     sp500_dir = data_dir + "sp500/"
 
     # Load ticker data
+    print("Loading S&P 500 data...")
     load_sp500_data(data_dir, start=min(last_strength_date, last_breadth_date))
+    print("Updating date count...")
     update_date_count(data_dir)
 
     trading_days = pd.read_csv(data_dir + "trading_days.csv", index_col=0, header=[0,1])
     
+    print("Updating breadth data...")
     update_breadth_data(sp500_dir, df_breadth, trading_days)
+    print("Updating strength data...")
     update_strength_data(sp500_dir, df_strength, trading_days)
 
-def fetch_all(data_dir, start_date, end_date=dt.date.today()):
+def fetch_all(data_dir, start_date, end_date=pd.Timestamp.today().date()):
     # Scrape all data
+    print("Scraping AAII Sentiment Survey data...")
     scrape_aaii()
+    print("Scraping Insider Transactions data...")
     scrape_insider()
+    print("Scraping Margin Stats data...")
     scrape_margin_stats()
+    print("Scraping Put/Call Ratio data...")
     scrape_put_call()
+    print("Scraping S&P 500 companies data...")
     scrape_companies()
 
     load_strength_breadth_data(data_dir)
     
+    print("Fetching metrics data...")
     Metric.setPreferences(data_dir, start_date, end_date)
     metrics = []
     metrics.append(T10YearYield())

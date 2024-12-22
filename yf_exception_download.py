@@ -1,4 +1,5 @@
 from sys import exit
+import pandas as pd
 import yfinance as yf
 import yfinance.exceptions as yf_exc
 import yfinance.shared as yf_shared
@@ -9,6 +10,28 @@ NO_DATA_IN_RANGE = "NO DATA IN RANGE"
 TIMEOUT = "TIMEOUT"
 DEBUG_ERROR = "DEBUG ERROR"
 MAX_ERR_COUNT = 5
+
+def isDataInRange(start, end, trading_days):
+    if start == None:
+        return True
+    start_date = pd.to_datetime(start).strftime("%Y-%m-%d")
+    if isinstance(trading_days, pd.DataFrame) and not trading_days.empty:
+        # check if there are trading days in the range
+        if end == None:
+            data_range = trading_days.loc[start_date:]
+        else:
+            data_range = trading_days.loc[start_date:(pd.to_datetime(end) - pd.DateOffset(days=1)).strftime("%Y-%m-%d")]
+        if data_range.empty:
+            return False
+    else:
+        err1 = DEBUG_ERROR
+        while err1 != TIMEOUT:
+            _, err1 = downloadWithExceptions("SPY", start=start, end=end)
+            if err1 == TIMEOUT:
+                print(f"Error: Timeout for SPY. Retrying...")
+        if err1 == NO_DATA_IN_RANGE:
+            return False
+    return True
 
 def downloadWithExceptions(ticker : str, start=None, end=None):
     ticker = ticker.upper()
@@ -57,7 +80,10 @@ def downloadWithExceptions(ticker : str, start=None, end=None):
             exit()
     return (data, err)
 
-def downloadCompleteHandler(ticker : str, start=None, end=None, ignore_no_data=False, check_replacement_first=False):
+def downloadCompleteHandler(ticker : str, start=None, end=None, ignore_no_data=False, check_replacement_first=False, trading_days=None):
+    if isinstance(trading_days, pd.DataFrame) and not trading_days.empty:
+        if not isDataInRange(start, end, trading_days):
+            return pd.DataFrame()
     start_ticker = ticker
     if check_replacement_first:
         with open("repoData/replacement_list.csv", "r") as f:
@@ -107,6 +133,9 @@ def downloadCompleteHandler(ticker : str, start=None, end=None, ignore_no_data=F
                     break
             else:
                 if err_count < MAX_ERR_COUNT:
+                    if ignore_no_data and err == NO_DATA_IN_RANGE:
+                        if not isDataInRange(start, end, trading_days):
+                            break
                     print(f"Error: Failed downloading data for expected valid ticker: {ticker}. Retrying...{err_count}")
                     err_count += 1
                     sleep(10)
@@ -134,15 +163,9 @@ def downloadCompleteHandler(ticker : str, start=None, end=None, ignore_no_data=F
                 print("Replacement list updated.")
             ticker = new_ticker
         elif err == NO_DATA_IN_RANGE:
-            # check if the SPY has data for the range
-            while err != TIMEOUT:
-                _, err = downloadWithExceptions("SPY", start=start, end=end)
-                if err == TIMEOUT:
-                    print(f"Error: Timeout for {ticker}. Retrying...")
-            if err != NO_DATA_IN_RANGE:
+            if isDataInRange(start, end, trading_days):
                 print(f"Error: No data for {ticker} in range {start} to {end}.")
                 exit()
-                # raise ValueError(NO_DATA_IN_RANGE)
             else:
                 break
         err_count = 0
