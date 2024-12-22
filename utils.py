@@ -1,10 +1,7 @@
 import os
 import pandas as pd
-import numpy as np
-import pandas_datareader.data as web
 import yfinance as yf
 
-from yf_exception_download import downloadCompleteHandler
 from scraper.aaii_scraper import scrape_aaii
 from scraper.insider_scraper import scrape_insider
 from scraper.margin_stats_scraper import scrape_margin_stats
@@ -13,126 +10,6 @@ from scraper.sp500_company_scraper import scrape_companies
 from metric_base import Metric
 from metrics import YieldCurve, T10YearYield, JunkBondSpread, SaveHavenDemand, ConsumerSentiment, SP500Momentum, PutCallRatio, InsiderTransactions, AAIISentiment, MarginStats, VIX, StockPriceBreadth, StockPriceStrength
 import basic_utils
-
-# Fetch data from Yahoo Finance
-def fetch_yf_data(ticker, data_dir, start_date, end_date=None, ignore_no_data=False, load_full_data=False, reload_last_date=True, trading_days=None):
-    check_repl = not load_full_data
-    start_date, end_date = basic_utils.convert_to_dates(start_date, end_date)
-    # check if data is already saved to csv file
-    # check if there is a file which ends with "_{ticker}.csv"
-    for file in os.listdir(data_dir):
-        if file.endswith(f"_{ticker}.csv"):
-            # check whether we need to download new data
-            data = pd.read_csv(data_dir + file, index_col=0, parse_dates=True, header=[0,1])
-            changed = False
-            old_data_start = pd.to_datetime(file.split("_")[0]).date()
-            old_data_end = pd.to_datetime(file.split("_")[1]).date()
-            new_start = old_data_start
-            new_end = old_data_end
-            if start_date < old_data_start:
-                # load new data and add to the beginning of the old data
-                new_data = downloadCompleteHandler(
-                    ticker, 
-                    start=start_date, 
-                    end=old_data_start, 
-                    ignore_no_data=ignore_no_data, 
-                    check_replacement_first=check_repl,
-                    trading_days=trading_days
-                )
-                if not new_data.empty:
-                    data = pd.concat([new_data, data])
-                changed = True
-                new_start = start_date
-            if end_date > old_data_end or (end_date >= old_data_end and reload_last_date):
-                # load new data and add to the end of the old data
-                if reload_last_date:
-                    new_data = downloadCompleteHandler(
-                        ticker, 
-                        start=old_data_end, 
-                        end=(end_date + pd.DateOffset(days=1)).date(), 
-                        ignore_no_data=ignore_no_data, 
-                        check_replacement_first=check_repl,
-                        trading_days=trading_days
-                    )
-                else:
-                    new_data = downloadCompleteHandler(
-                        ticker, 
-                        start=(old_data_end + pd.DateOffset(days=1)).date(), 
-                        end=(end_date + pd.DateOffset(days=1)).date(), 
-                        ignore_no_data=ignore_no_data, 
-                        check_replacement_first=check_repl,
-                        trading_days=trading_days
-                    )
-                if not new_data.empty:
-                    # remove last row if it is the same as the first row of the new data
-                    if new_data.index[0] == data.index[-1]:
-                        data = data.iloc[:-1]
-                    data = pd.concat([data, new_data])
-                changed = True
-                new_end = end_date
-            if changed:
-                data.to_csv(data_dir + f"{new_start}_{new_end}_{ticker}.csv")
-                # delete old file
-                if file != f"{new_start}_{new_end}_{ticker}.csv":
-                    os.remove(data_dir + file)
-            # return data from start_date to end_date
-            return data.loc[start_date:end_date]
-    # if no file found, download new data
-    data = downloadCompleteHandler(
-        ticker, 
-        start=start_date, 
-        end=(end_date + pd.DateOffset(days=1)).date(), 
-        ignore_no_data=ignore_no_data, 
-        check_replacement_first=check_repl,
-        trading_days=trading_days
-    )
-    # skip data if it is invalid (empty replacement entry)
-    if type(data) != pd.DataFrame:
-        if data == None:
-            return None
-        else:
-            raise Exception(data)
-    # save data to csv file
-    data.to_csv(data_dir + f"{start_date}_{end_date}_{ticker}.csv")
-    return data
-
-# Fetch data from FRED
-def fetch_fred_data(name, data_dir, start_date, end_date=None):
-    start_date, end_date = basic_utils.convert_to_dates(start_date, end_date)
-    # check if data is already saved to csv file
-    # check if there is a file which ends with "_{ticker}.csv"
-    for file in os.listdir(data_dir):
-        if file.endswith(f"_{name}.csv"):
-            # check whether we need to download new data
-            data = pd.read_csv(data_dir + file, index_col=0, parse_dates=True, header=[0])
-            changed = False
-            old_data_start = pd.to_datetime(file.split("_")[0]).date()
-            old_data_end = pd.to_datetime(file.split("_")[1]).date()
-            new_start = old_data_start
-            new_end = old_data_end
-            if start_date < old_data_start:
-                # load new data and add to the beginning of the old data
-                new_data = web.DataReader(name, "fred", start_date, (old_data_start - pd.DateOffset(days=1)).date())
-                data = pd.concat([new_data, data])
-                changed = True
-                new_start = start_date
-            if end_date > old_data_end:
-                # load new data and add to the end of the old data
-                new_data = web.DataReader(name, "fred", (old_data_end + pd.DateOffset(days=1)).date(), end_date)
-                data = pd.concat([data, new_data])
-                changed = True
-                new_end = end_date
-            if changed:
-                data.to_csv(data_dir + f"{new_start}_{new_end}_{name}.csv")
-                # delete old file
-                os.remove(data_dir + file)
-            # return data from start_date to end_date
-            return data.loc[start_date:end_date]
-    # if no file found, download new data
-    data = web.DataReader(name, "fred", start_date, end_date)      
-    # save data to csv file
-    data.to_csv(data_dir + f"{start_date}_{end_date}_{name}.csv")
-    return data
 
 def get_sp500_possible_replacements(data_dir):
     sp500df = basic_utils.get_repo_data("sp500_companies.csv")
@@ -191,7 +68,7 @@ def load_sp500_data(data_dir, start=None, load_full_data=False):
             # get one year of data for each ticker earlier than start_date
             while True:
                 try:
-                    fetch_yf_data(
+                    basic_utils.fetch_yf_data(
                         ticker, 
                         data_dir + "sp500/", 
                         (index - pd.DateOffset(days=365)).date(), 
