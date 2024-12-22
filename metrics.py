@@ -48,8 +48,7 @@ class MarginStats(Metric):
         self.processed = self.data
     
     def normalize(self):
-        # no normalization needed
-        self.result = self.processed
+        self.result = (basic_utils.difference_to_ema(self.processed, steepness=5, window=36) + basic_utils.normalize_tanh(self.processed, steepness=2, shift=-1.5)) / 2
 
 class AAIISentiment(Metric):
     def __init__(self):
@@ -64,8 +63,7 @@ class AAIISentiment(Metric):
         self.processed = self.data
     
     def normalize(self):
-        # no normalization needed
-        self.result = self.processed
+        self.result = basic_utils.normalize_tanh(self.processed, steepness=5)
 
 class InsiderTransactions(Metric):
     def __init__(self):
@@ -81,7 +79,7 @@ class InsiderTransactions(Metric):
     
     def normalize(self):
         # Normalize the data
-        self.result = basic_utils.difference_to_ema(self.processed, window=5, steepness=10)
+        self.result = basic_utils.normalize_tanh(self.processed, steepness=7, shift=0.4, reverse=True)
 
 class PutCallRatio(Metric):
     def __init__(self):
@@ -98,7 +96,7 @@ class PutCallRatio(Metric):
 
     def normalize(self):
         # Normalize the data
-        self.result = basic_utils.difference_to_ema(self.processed, steepness=10, reverse=True).ewm(span=3).mean()
+        self.result = basic_utils.difference_to_ema(self.processed, steepness=15, reverse=True, window=500).ewm(span=5).mean()
 
 class ConsumerSentiment(Metric):
     def __init__(self):
@@ -114,10 +112,10 @@ class ConsumerSentiment(Metric):
     
     def normalize(self):
         # Normalize the data
-        self.result = basic_utils.difference_to_ema(self.processed, steepness=0.2, window=24)
+        self.result = basic_utils.difference_to_ema(self.processed, steepness=0.2, window=36)
 
 class SaveHavenDemand(Metric):
-    def __init__(self, period=20, bond_weight=None):
+    def __init__(self, period=100, bond_weight=None):
         super().__init__()
         self.period = period
         self.bond_weight = bond_weight
@@ -140,7 +138,7 @@ class SaveHavenDemand(Metric):
         self.processed = sp500_annual_return[["Diff"]]
     
     def normalize(self):
-        self.result = basic_utils.difference_to_ema(self.processed, steepness=0.02)
+        self.result = basic_utils.normalize_tanh(self.processed, steepness=0.05)
 
 class JunkBondSpread(Metric):
     def __init__(self):
@@ -173,10 +171,7 @@ class YieldCurve(Metric):
     
     def normalize(self):
         # Normalize the data
-        self.result = basic_utils.normalize_tanh(self.processed, shift=-1)
-        
-        # calculate derivative of the yield curve
-        self.test = (self.result.diff(periods=50) + 50).ewm(span=5).mean()
+        self.result = basic_utils.normalize_tanh(self.processed, shift=1, reverse=True)
 
 class T10YearYield(Metric):
     def __init__(self):
@@ -192,7 +187,7 @@ class T10YearYield(Metric):
     
     def normalize(self):
         # Normalize the data
-        self.result = basic_utils.difference_to_ema(self.processed, steepness=1.5, window=500)
+        self.result = basic_utils.difference_to_ema(self.processed, steepness=2, window=500)
     
 class StockPriceBreadth(Metric):
     def __init__(self):
@@ -208,7 +203,7 @@ class StockPriceBreadth(Metric):
     
     def normalize(self):
         # Normalize the data
-        self.result = basic_utils.normalize_tanh(self.processed, steepness=0.3, shift=-50)
+        self.result = basic_utils.normalize_tanh(self.processed, steepness=0.35, shift=-52)
 
 class StockPriceStrength(Metric):
     def __init__(self):
