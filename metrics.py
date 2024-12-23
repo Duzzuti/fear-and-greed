@@ -1,10 +1,11 @@
 from metric_base import Metric
 import basic_utils
 import numpy as np
+import pandas as pd
 
 class SP500Momentum(Metric):
-    def __init__(self, moving_avg_window=125):
-        super().__init__()
+    def __init__(self, moving_avg_window=125, shift=pd.DateOffset(days=0)):
+        super().__init__(shift)
         self.moving_avg_window = moving_avg_window
 
     def fetch(self):
@@ -20,8 +21,8 @@ class SP500Momentum(Metric):
         self.result = self.processed
 
 class VIX(Metric):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, shift=pd.DateOffset(days=0)):
+        super().__init__(shift)
 
     def fetch(self):
         # Fetch the VIX data
@@ -99,8 +100,8 @@ class PutCallRatio(Metric):
         self.result = basic_utils.difference_to_ema(self.processed, steepness=15, reverse=True, window=500).ewm(span=5).mean()
 
 class ConsumerSentiment(Metric):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, shift=pd.DateOffset(days=0)):
+        super().__init__(shift)
 
     def fetch(self):
         # Load the consumer sentiment data
@@ -115,8 +116,8 @@ class ConsumerSentiment(Metric):
         self.result = basic_utils.difference_to_ema(self.processed, steepness=0.2, window=36)
 
 class SaveHavenDemand(Metric):
-    def __init__(self, period=100, bond_weight=None):
-        super().__init__()
+    def __init__(self, period=100, bond_weight=None, shift=pd.DateOffset(days=0)):
+        super().__init__(shift)
         self.period = period
         self.bond_weight = bond_weight
 
@@ -141,8 +142,8 @@ class SaveHavenDemand(Metric):
         self.result = basic_utils.normalize_tanh(self.processed, steepness=0.05)
 
 class JunkBondSpread(Metric):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, shift=pd.DateOffset(days=0)):
+        super().__init__(shift)
 
     def fetch(self):
         # Load the junk bond spread data
@@ -158,8 +159,8 @@ class JunkBondSpread(Metric):
         self.result = basic_utils.difference_to_ema(self.processed, steepness=1, reverse=True, window=252)
 
 class YieldCurve(Metric):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, shift=pd.DateOffset(days=0)):
+        super().__init__(shift)
 
     def fetch(self):
         # Load the yield curve data
@@ -174,8 +175,8 @@ class YieldCurve(Metric):
         self.result = basic_utils.normalize_tanh(self.processed, shift=1, reverse=True)
 
 class T10YearYield(Metric):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, shift=pd.DateOffset(days=0)):
+        super().__init__(shift)
 
     def fetch(self):
         # Load the 10 year yield data
@@ -190,8 +191,8 @@ class T10YearYield(Metric):
         self.result = basic_utils.difference_to_ema(self.processed, steepness=2, window=500)
     
 class StockPriceBreadth(Metric):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, shift=pd.DateOffset(days=0)):
+        super().__init__(shift)
 
     def fetch(self):
         # Load the stock price breadth data
@@ -206,8 +207,8 @@ class StockPriceBreadth(Metric):
         self.result = basic_utils.normalize_tanh(self.processed, steepness=0.35, shift=-52)
 
 class StockPriceStrength(Metric):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, shift=pd.DateOffset(days=0)):
+        super().__init__(shift)
 
     def fetch(self):
         # Load the stock price strength data

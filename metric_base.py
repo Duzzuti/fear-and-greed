@@ -2,19 +2,18 @@ import pandas as pd
 import numpy as np
 import os
 
-import basic_utils
-
 class Metric:
     data_dir = None
     start_date = None
     end_date = None
     trading_days = None
 
-    def __init__(self):
+    def __init__(self, shift=pd.DateOffset(days=0)):
         self.data = None
         self.processed = None
         self.result = None
         self.test = None    # DEBUG
+        self.shift = shift
         self.name = self.__class__.__name__
     
     @classmethod
@@ -43,12 +42,13 @@ class Metric:
         raise NotImplementedError
 
     def reindex(self):
-        # get the date_count.csv
-        date_count = basic_utils.get_repo_data("date_count.csv", self.start_date, self.end_date)
+        # shift the data
+        self.result.index = self.result.index + self.shift
+        self.result.index = pd.to_datetime(self.result.index).date
         # add all dates to result
-        self.result = self.result.reindex(pd.date_range(self.start_date, self.end_date), fill_value=np.nan)
-        self.result.ffill(inplace=True)
-        self.result = self.result.reindex(date_count.index, fill_value=np.nan)
+        self.result = self.result.reindex(pd.date_range(self.start_date, self.end_date), method='ffill')
+        self.result = self.result.reindex(self.trading_days.index, fill_value=np.nan)
+        self.result.dropna(inplace=True)
     
     def save(self):
         if not os.path.exists("indicatorData/"):
