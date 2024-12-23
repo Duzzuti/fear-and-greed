@@ -19,6 +19,8 @@ jobs:
       # Step 1: Checkout the repo
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          ref: update-sp500-tickers
 
       # Step 2: Set up Python
       - name: Set up Python
@@ -39,7 +41,6 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git fetch
-          git checkout update-sp500-tickers || git checkout -b update-sp500-tickers
           git pull || exit 1
       
       # Step 5: Run the scraper
@@ -63,6 +64,8 @@ jobs:
       - name: Push changes
         if: env.pr_exists == 'true'
         run: |
+          git add repoData/sp500_companies.csv
+          git commit -m "Update S&P 500 tickers [ci skip]" || exit 0
           git push origin update-sp500-tickers || git push origin update-sp500-tickers --set-upstream
           
       # Step 8: Create a pull request
