@@ -8,7 +8,7 @@ from scraper.margin_scraper import scrape_margin_stats
 from scraper.put_call_scraper import scrape_put_call
 from scraper.sp500_company_scraper import scrape_companies
 from metric_base import Metric
-from metrics import YieldCurve, T10YearYield, JunkBondSpread, SaveHavenDemand, ConsumerSentiment, SP500Momentum, PutCallRatio, InsiderTransactions, AAIISentiment, MarginStats, VIX, StockPriceBreadth, StockPriceStrength
+from metrics import YieldCurve, T10YearYield, JunkBondSpread, SafeHavenDemand, ConsumerSentiment, SP500Momentum, PutCallRatio, InsiderTransactions, AAIISentiment, MarginStats, VIX, StockPriceBreadth, StockPriceStrength
 import basic_utils
 
 def get_sp500_possible_replacements(data_dir):
@@ -311,18 +311,19 @@ def fetch_all(data_dir, start_date, end_date=pd.Timestamp.today().date(), skip_s
     print("Fetching metrics data...")
     Metric.setPreferences(data_dir, start_date, end_date)
     metrics = []
-    metrics.append(T10YearYield(shift=pd.DateOffset(days=1)))
-    metrics.append(JunkBondSpread(shift=pd.DateOffset(days=2)))
-    metrics.append(SaveHavenDemand(shift=pd.DateOffset(days=1)))
-    metrics.append(ConsumerSentiment(shift=pd.DateOffset(months=1, days=20)))
+    # Do not change the order of the metrics (it is used in weights)
     metrics.append(SP500Momentum(shift=pd.DateOffset(days=1)))
+    metrics.append(StockPriceBreadth(shift=pd.DateOffset(days=1)))
+    metrics.append(StockPriceStrength(shift=pd.DateOffset(days=1)))
+    metrics.append(JunkBondSpread(shift=pd.DateOffset(days=2)))
+    metrics.append(SafeHavenDemand(shift=pd.DateOffset(days=1)))
     metrics.append(PutCallRatio())
     metrics.append(InsiderTransactions())
     metrics.append(AAIISentiment())
+    metrics.append(ConsumerSentiment(shift=pd.DateOffset(months=1, days=20)))
     metrics.append(MarginStats())
     metrics.append(VIX(shift=pd.DateOffset(days=1)))
-    metrics.append(StockPriceBreadth(shift=pd.DateOffset(days=1)))
-    metrics.append(StockPriceStrength(shift=pd.DateOffset(days=1)))
+    metrics.append(T10YearYield(shift=pd.DateOffset(days=1)))
     metrics.append(YieldCurve(shift=pd.DateOffset(days=1)))
     for metric in metrics:
         metric.get()
