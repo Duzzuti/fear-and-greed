@@ -1,1 +1,8 @@
+pandas
+numpy
+matplotlib
+yfinance
+pandas-datareader
+requests
+beautifulsoup4
 xlrd
