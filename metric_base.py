@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 
-import utils
+import basic_utils
 
 class Metric:
     data_dir = None
@@ -44,7 +44,7 @@ class Metric:
 
     def reindex(self):
         # get the date_count.csv
-        date_count = utils.get_repo_data("date_count.csv", self.start_date, self.end_date)
+        date_count = basic_utils.get_repo_data("date_count.csv", self.start_date, self.end_date)
         # add all dates to result
         self.result = self.result.reindex(pd.date_range(self.start_date, self.end_date), fill_value=np.nan)
         self.result.ffill(inplace=True)

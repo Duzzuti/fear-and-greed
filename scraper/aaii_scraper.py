@@ -60,10 +60,7 @@ def scrape_aaii():
     df = pd.DataFrame(rows[1:], columns=rows[0])
     # remove the % sign and convert to float
     # add the bull bear difference
-    df['Bull-Bear Spread'] = df['Bullish'].str.replace('%', '').astype(float) - df['Bearish'].str.replace('%', '').astype(float)
-    # normalizing the spread (from -100%-100% to 0-100)
-    # * 3 to make the curve steeper, +1 to make the range 0-2, / 2 to make the range 0-1, * 100 to make the range 0-100
-    df['Bull-Bear Spread'] = ((np.tanh(df['Bull-Bear Spread'] / 100 * 3) + 1) / 2) * 100
+    df['Bull-Bear Spread'] = (df['Bullish'].str.replace('%', '').astype(float) - df['Bearish'].str.replace('%', '').astype(float)) / 100
     # drop the bullish, neutral and bearish columns
     df.drop(columns=['Bullish', 'Neutral', 'Bearish'], inplace=True)
     # rename the date column

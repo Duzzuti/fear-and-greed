@@ -76,8 +76,6 @@ def scrape_margin_stats():
     df["Credit"] = df["Credit S"] + df["Credit C"]
     df.drop(columns=["Credit S", "Credit C"], inplace=True)
     df["Leverage Ratio"] = df["Debit"] / df["Credit"]
-    df["Leverage Ratio"] -= 1.5
-    df["Leverage Ratio"] = (np.tanh(df["Leverage Ratio"]*2) + 1) *50
 
     df.index = df.index + pd.DateOffset(months=1) + pd.DateOffset(days=16)
     df.index = pd.to_datetime(df.index).dt.date
