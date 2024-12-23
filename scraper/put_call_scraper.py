@@ -4,7 +4,14 @@ import pandas as pd
 import random
 import time
 
-def scrape_aaii():
+def scrape_put_call():
+    # open the old data file
+    old_df = pd.read_csv('repoData/put_call_ratios.csv')
+    # get the last date in the old data
+    last_date = pd.to_datetime(old_df['Date'].iloc[-1]).date()
+    if last_date >= pd.Timestamp.today().date():
+        print("No new data available.")
+        return
     # data fetching
     max_tries = 5
     for i in range(max_tries):
@@ -55,18 +62,17 @@ def scrape_aaii():
 
     df = pd.DataFrame(rows[1:], columns=rows[0])
     # convert the date to datetime, format is "fullMonthName day, year"
-    df['Date'] = pd.to_datetime(df['Date'], format='%B %d, %Y')
+    df['Date'] = pd.to_datetime(df['Date'], format='%B %d, %Y') + pd.DateOffset(days=1)
     df['Date'] = df['Date'].dt.date
     #rename Value to PCR
     df.rename(columns={'Value': 'PCR'}, inplace=True)
     # reverse the table
     df = df.iloc[::-1]
-    # open the old data file and appending possible new data
-    old_df = pd.read_csv('repoData/put_call_ratios.csv')
-    # get the last date in the old data
-    last_date = pd.to_datetime(old_df['Date'].iloc[-1]).date()
     # get the new data
     new_df = df[df['Date'] > last_date]
+    if new_df.empty:
+        print("No new data available.")
+        return
     # append the new data to the old data
     new_df = pd.concat([old_df, new_df], ignore_index=True)
     # save the new data
@@ -74,4 +80,4 @@ def scrape_aaii():
 
 
 if __name__ == "__main__":
-    scrape_aaii()
+    scrape_put_call()

@@ -7,6 +7,15 @@ import time
 def scrape_insider():
     # data fetching
     max_tries = 5
+    # open the old data file
+    old_df = pd.read_csv('repoData/insider.csv')
+    # get the last date in the old data
+    last_date = pd.to_datetime(old_df['Date'].iloc[-1]).date()
+    # if todays data is already in the file, exit
+    if pd.Timestamp.today().date() == last_date:
+        print("No new data available.")
+        return
+
     for i in range(max_tries):
         user_agents = [
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
@@ -61,13 +70,8 @@ def scrape_insider():
     date = pd.to_datetime(date, format='%Y-%m-%d', errors='coerce').date()
     # get value
     value = df['Value'].iloc[0]
-   
-    # open the old data file and appending possible new data
-    old_df = pd.read_csv('repoData/insider.csv')
-    # get the last date in the old data
-    last_date = pd.to_datetime(old_df['Date'].iloc[-1]).date()
     # if months are equal add the data if it is different
-    if last_date.month != date.month or (float(value) != float(old_df['Value'].iloc[-1] and date != last_date)):
+    if last_date.month != date.month or (float(value) != float(old_df['Value'].iloc[-1]) and pd.Timestamp.today().date() != last_date):
         new_df = pd.concat([old_df, pd.DataFrame({"Date": pd.Timestamp.today().date(), "Value": value}, index=["Date"])], ignore_index=True)
         # save the new data
         new_df.to_csv('repoData/insider.csv', index=False)

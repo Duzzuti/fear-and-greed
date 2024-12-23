@@ -1,5 +1,4 @@
 import pandas as pd
-import datetime as dt
 
 def scrape_companies(data_dir="repoData/"):
     # Scrape the Wikipedia page for S&P 500 companies
@@ -9,8 +8,8 @@ def scrape_companies(data_dir="repoData/"):
     current_df = pd.read_csv(data_dir + "sp500_companies.csv")
     # look at last entry in the current_df
     last_entry = current_df.iloc[-1]
-    last_entry_date = dt.datetime.strptime(last_entry["date"], "%Y-%m-%d").date()
-    current_date = dt.datetime.now().date()
+    last_entry_date = pd.to_datetime(last_entry["date"]).date()
+    current_date = pd.Timestamp.today().date()
     last_entry_companies = sorted(last_entry["tickers"].split(","))
     current_companies = sorted(sp500_table["Symbol"].tolist())
 

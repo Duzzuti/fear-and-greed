@@ -1,11 +1,18 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-import numpy as np
 import random
 import time
 
 def scrape_aaii():
+    # open the old data file
+    old_df = pd.read_csv('repoData/aaii_sentiment.csv')
+    # get the last date in the old data
+    last_date = pd.to_datetime(old_df['Date'].iloc[-1]).date()
+    if (last_date + pd.DateOffset(days=5)).date() >= pd.Timestamp.today().date():
+        print("No new data available.")
+        return
+
     # data fetching
     max_tries = 5
     for i in range(max_tries):
@@ -52,10 +59,7 @@ def scrape_aaii():
     df = pd.DataFrame(rows[1:], columns=rows[0])
     # remove the % sign and convert to float
     # add the bull bear difference
-    df['Bull-Bear Spread'] = df['Bullish'].str.replace('%', '').astype(float) - df['Bearish'].str.replace('%', '').astype(float)
-    # normalizing the spread (from -100%-100% to 0-100)
-    # * 3 to make the curve steeper, +1 to make the range 0-2, / 2 to make the range 0-1, * 100 to make the range 0-100
-    df['Bull-Bear Spread'] = ((np.tanh(df['Bull-Bear Spread'] / 100 * 3) + 1) / 2) * 100
+    df['Bull-Bear Spread'] = (df['Bullish'].str.replace('%', '').astype(float) - df['Bearish'].str.replace('%', '').astype(float)) / 100
     # drop the bullish, neutral and bearish columns
     df.drop(columns=['Bullish', 'Neutral', 'Bearish'], inplace=True)
     # rename the date column
@@ -65,12 +69,10 @@ def scrape_aaii():
     # than the current date, in that case we add the previous year
     today = pd.Timestamp.today()
     df['Date'] = df['Date'].apply(lambda x: pd.to_datetime(x + ' ' + str(today.year)).date() if pd.to_datetime(x + ' ' + str(today.year)) < today else pd.to_datetime(x + ' ' + str(today.year - 1)).date())
+    df['Date'] = df['Date'] + pd.DateOffset(days=1)
+    df['Date'] = pd.to_datetime(df['Date']).dt.date
     # reverse the table
     df = df.iloc[::-1]
-    # open the old data file and appending possible new data
-    old_df = pd.read_csv('repoData/aaii_sentiment.csv')
-    # get the last date in the old data
-    last_date = pd.to_datetime(old_df['Date'].iloc[-1]).date()
     # get the new data
     new_df = df[df['Date'] > last_date]
     # append the new data to the old data
