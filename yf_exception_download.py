@@ -4,6 +4,7 @@ import yfinance as yf
 import yfinance.exceptions as yf_exc
 import yfinance.shared as yf_shared
 from time import sleep
+from requests.sessions import Session
 
 INVALID_TICKER = "INVALID TICKER"
 NO_DATA_IN_RANGE = "NO DATA IN RANGE"
@@ -99,6 +100,10 @@ def downloadCompleteHandler(ticker : str, start=None, end=None, ignore_no_data=F
     err = DEBUG_ERROR
     err_count = 0
     while err:
+        err_count += 1
+        if err_count >= 2:
+            print(f"Error: Failed downloading data for {ticker} twice. Resetting yfinance.")
+            yf.utils._requests = Session()
         data, err = downloadWithExceptions(ticker, start=start, end=end)
         if err == TIMEOUT:
             print(f"Error: Timeout for {ticker}. Retrying...")
@@ -137,7 +142,6 @@ def downloadCompleteHandler(ticker : str, start=None, end=None, ignore_no_data=F
                         if not isDataInRange(start, end, trading_days):
                             break
                     print(f"Error: Failed downloading data for expected valid ticker: {ticker}. Retrying...{err_count}")
-                    err_count += 1
                     sleep(10)
                     continue
                 new_ticker = None
