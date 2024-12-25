@@ -104,6 +104,9 @@ def downloadCompleteHandler(ticker : str, start=None, end=None, ignore_no_data=F
         if err_count >= 2:
             print(f"Error: Failed downloading data for {ticker} twice. Resetting yfinance.")
             yf.utils._requests = Session()
+        if err_count > MAX_ERR_COUNT:
+            print(f"Error: Failed downloading data for {ticker} {MAX_ERR_COUNT} times. Exiting.")
+            exit()
         data, err = downloadWithExceptions(ticker, start=start, end=end)
         if err == TIMEOUT:
             print(f"Error: Timeout for {ticker}. Retrying...")
