@@ -62,7 +62,7 @@ def downloadWithExceptions(ticker : str, start=None, end=None):
                 full_err = getattr(yf_exc, error_type)(ticker, error_msg)
             elif error_type == yf_exc.YFInvalidPeriodError.__name__:
                 full_err = getattr(yf_exc, error_type)(ticker, "start=" + str(start) + ", end=" + str(end), error_msg)
-            elif error_type == "ReadTimeout":
+            elif error_type in ["ReadTimeout", "JSONDecodeError"]:
                 full_err = Exception(error_msg)
             else:
                 raise AttributeError("Unknown error type: " + error_type)
