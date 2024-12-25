@@ -167,6 +167,7 @@ def update_trading_days(data_dir):
 def update_breadth_data(sp500_dir, df_breadth, trading_days):
     last_breadth_date = df_breadth.index[-1]
     df_list = []
+    file_list = []
     # iterate over all csv files in sp500 folder
     for file in os.listdir(sp500_dir):
         if file.endswith(".csv"):
@@ -191,11 +192,20 @@ def update_breadth_data(sp500_dir, df_breadth, trading_days):
             if df.empty:
                 continue
             df_list.append(df)
+            file_list.append(file)
 
     # Process each ticker
-    for df in df_list:
+    for df, file in zip(df_list, file_list):
         # Calculate the daily price change
-        df['Change'] = df['Adj Close'].diff()
+        try:
+            df['Change'] = df['Adj Close'].diff()
+        except KeyError:
+            print("No 'Adj Close' column found for", file)
+            try:
+                df['Change'] = df['Close'].diff()
+            except KeyError:
+                print("No 'Adj Close' or 'Close' column found for", file)
+                continue
         
         # Define volumes for "up" and "down" days
         df['Volume Up'] = df['Volume'].where(df['Change'] > 0, 0)  # Volume for "up" days
