@@ -240,6 +240,8 @@ def update_strength_data(sp500_dir, df_strength, trading_days):
             df = df.ffill().where(ffill_mask)
             df.dropna(inplace=True)
             # get row that is after actual_start_date
+            if df[df.index >= actual_start_date].empty:
+                continue
             first_valid_row = df[df.index >= actual_start_date].iloc[0]
             load_data_since = (first_valid_row.name - pd.DateOffset(days=365)).date()
             year_high = df.loc[df[(df.index <= first_valid_row.name) & (df.index >= load_data_since)].idxmax()].iloc[0]
