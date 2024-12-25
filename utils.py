@@ -238,7 +238,15 @@ def update_strength_data(sp500_dir, df_strength, trading_days):
     for file in os.listdir(sp500_dir):
         if file.endswith(".csv"):
             # read csv file
-            df = pd.read_csv(f"{sp500_dir}{file}", header=[0,1], index_col=0, parse_dates=True)["Adj Close"]
+            try:
+                df = pd.read_csv(f"{sp500_dir}{file}", header=[0,1], index_col=0, parse_dates=True)["Adj Close"]
+            except KeyError:
+                print("No 'Adj Close' column found for", file)
+                try:
+                    df = pd.read_csv(f"{sp500_dir}{file}", header=[0,1], index_col=0, parse_dates=True)["Close"]
+                except KeyError:
+                    print("No 'Adj Close' or 'Close' column found for", file)
+                    continue
             df.index = pd.to_datetime(df.index).date
             if df.index[-1] < last_strength_date:
                 continue
