@@ -188,6 +188,8 @@ def update_breadth_data(sp500_dir, df_breadth, trading_days):
             df = df.ffill().where(ffill_mask)
             # remove all irrelevant data
             df = df[df.index >= init_date]
+            if df.empty:
+                continue
             df_list.append(df)
 
     # Process each ticker
